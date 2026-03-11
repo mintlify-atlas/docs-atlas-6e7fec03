@@ -1,0 +1,235 @@
+---
+title: "Create User"
+api: "POST /api/usuarios"
+description: "Create a new user account"
+---
+
+## Authentication
+
+<Warning>
+  This endpoint requires JWT authentication with **Admin** role. Include the Bearer token in the Authorization header.
+</Warning>
+
+Only administrators can create new user accounts directly through this endpoint. Regular user registration should use the `/api/auth/registro` endpoint.
+
+## Request Body
+
+<ParamField body="username" type="string" required>
+  Unique username for the account (max 100 characters)
+</ParamField>
+
+<ParamField body="nombre" type="string" required>
+  User's first name (max 100 characters)
+</ParamField>
+
+<ParamField body="apellidos" type="string" required>
+  User's last name(s) (max 150 characters)
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  User's email address. Must be valid and unique across all users.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User's password. Will be encrypted using BCrypt before storage.
+</ParamField>
+
+<ParamField body="fecha_nacimiento" type="string" required>
+  User's date of birth in ISO 8601 format (YYYY-MM-DD)
+</ParamField>
+
+<ParamField body="direccion_envio" type="string" required>
+  Shipping/delivery address
+</ParamField>
+
+<ParamField body="rol" type="string" required>
+  User role. Must be one of: `ADMIN` or `CLIENTE`
+</ParamField>
+
+<ParamField body="activo" type="boolean" default={true}>
+  Whether the account is active. Defaults to true.
+</ParamField>
+
+## Response
+
+Returns the newly created user object (without password).
+
+<ResponseField name="usuario_id" type="long">
+  Unique identifier assigned to the new user
+</ResponseField>
+
+<ResponseField name="username" type="string">
+  Username
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  First name
+</ResponseField>
+
+<ResponseField name="apellidos" type="string">
+  Last name(s)
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  Email address
+</ResponseField>
+
+<ResponseField name="fecha_nacimiento" type="string">
+  Date of birth (ISO 8601)
+</ResponseField>
+
+<ResponseField name="direccion_envio" type="string">
+  Shipping address
+</ResponseField>
+
+<ResponseField name="rol" type="string">
+  Assigned role (ADMIN or CLIENTE)
+</ResponseField>
+
+<ResponseField name="activo" type="boolean">
+  Account active status
+</ResponseField>
+
+## Example Request
+
+```bash cURL
+curl -X POST "http://localhost:8080/api/usuarios" \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "juan_perez",
+    "nombre": "Juan",
+    "apellidos": "Pérez García",
+    "email": "juan.perez@example.com",
+    "password": "SecurePassword123!",
+    "fecha_nacimiento": "1990-05-15",
+    "direccion_envio": "Calle Mayor 123, Madrid, 28013",
+    "rol": "CLIENTE",
+    "activo": true
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/api/usuarios', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${adminToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    username: 'juan_perez',
+    nombre: 'Juan',
+    apellidos: 'Pérez García',
+    email: 'juan.perez@example.com',
+    password: 'SecurePassword123!',
+    fecha_nacimiento: '1990-05-15',
+    direccion_envio: 'Calle Mayor 123, Madrid, 28013',
+    rol: 'CLIENTE',
+    activo: true
+  })
+});
+const user = await response.json();
+```
+
+```python Python
+import requests
+
+headers = {
+    'Authorization': f'Bearer {admin_token}',
+    'Content-Type': 'application/json'
+}
+data = {
+    'username': 'juan_perez',
+    'nombre': 'Juan',
+    'apellidos': 'Pérez García',
+    'email': 'juan.perez@example.com',
+    'password': 'SecurePassword123!',
+    'fecha_nacimiento': '1990-05-15',
+    'direccion_envio': 'Calle Mayor 123, Madrid, 28013',
+    'rol': 'CLIENTE',
+    'activo': True
+}
+response = requests.post(
+    'http://localhost:8080/api/usuarios',
+    headers=headers,
+    json=data
+)
+user = response.json()
+```
+
+## Example Response
+
+```json
+{
+  "usuario_id": 10,
+  "username": "juan_perez",
+  "nombre": "Juan",
+  "apellidos": "Pérez García",
+  "email": "juan.perez@example.com",
+  "fecha_nacimiento": "1990-05-15",
+  "direccion_envio": "Calle Mayor 123, Madrid, 28013",
+  "rol": "CLIENTE",
+  "activo": true
+}
+```
+
+## Status Codes
+
+<ResponseField name="201" type="Created">
+  User created successfully
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Invalid request body (validation errors):
+  - Invalid email format
+  - Username or email already exists
+  - Missing required fields
+  - Invalid date format
+  - Invalid role value
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid JWT token
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  User does not have Admin role. Only administrators can create users through this endpoint.
+</ResponseField>
+
+## Validation Rules
+
+- **Email**: Must be a valid email format and unique
+- **Username**: Must be unique across all users
+- **Password**: Automatically encrypted with BCrypt before storage
+- **Fecha de nacimiento**: Must be a valid date in ISO 8601 format (YYYY-MM-DD)
+- **Rol**: Must be either "ADMIN" or "CLIENTE"
+
+## Use Cases
+
+- **Admin user management**: Create employee or administrator accounts
+- **Bulk user import**: Programmatically create multiple user accounts
+- **Pre-configured accounts**: Set up test or demo accounts
+- **Account recovery**: Recreate accounts with specific requirements
+
+<Warning>
+  **Admin-only endpoint**: This endpoint requires Admin role. For regular user registration, direct users to `/api/auth/registro` which automatically assigns the CLIENTE role and returns a JWT token.
+</Warning>
+
+<Note>
+  The password is never returned in responses. It is encrypted using BCrypt and stored securely.
+</Note>
+
+<Tip>
+  Set `activo: false` to create inactive accounts that users cannot use to log in until an administrator activates them.
+</Tip>
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="User Registration" href="/api/auth/register">
+    Public endpoint for customer self-registration
+  </Card>
+  <Card title="Update User" href="/api/users/update-user">
+    Modify existing user information
+  </Card>
+</CardGroup>

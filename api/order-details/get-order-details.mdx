@@ -1,0 +1,127 @@
+---
+title: "Get Order Details"
+api: "GET /api/pedidos/{pedidoId}/detalles"
+description: "Retrieve all line items (details) for a specific order"
+---
+
+## Authentication
+
+<Warning>
+  This endpoint requires JWT authentication. Include the Bearer token in the Authorization header.
+</Warning>
+
+## Path Parameters
+
+<ParamField path="pedidoId" type="long" required>
+  The unique identifier of the order whose details you want to retrieve
+</ParamField>
+
+## Response
+
+Returns an array of order detail objects (line items) for the specified order.
+
+<ResponseField name="detalles" type="array">
+  Array of order line items
+  
+  <Expandable title="Order Detail Object">
+    <ResponseField name="detalle_id" type="long">
+      Unique identifier for this line item
+    </ResponseField>
+    <ResponseField name="producto_id" type="long">
+      ID of the product in this line item
+    </ResponseField>
+    <ResponseField name="nombre" type="string">
+      Product name at time of purchase
+    </ResponseField>
+    <ResponseField name="cantidad" type="integer">
+      Quantity of this product ordered
+    </ResponseField>
+    <ResponseField name="precioUnitario" type="number">
+      Price per unit at time of purchase (locked price)
+    </ResponseField>
+    <ResponseField name="subtotal" type="number">
+      Line total (cantidad × precioUnitario)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+```bash cURL
+curl -X GET "http://localhost:8080/api/pedidos/123/detalles" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/api/pedidos/123/detalles', {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+const details = await response.json();
+```
+
+```python Python
+import requests
+
+headers = {
+    'Authorization': f'Bearer {token}'
+}
+response = requests.get(
+    'http://localhost:8080/api/pedidos/123/detalles',
+    headers=headers
+)
+details = response.json()
+```
+
+## Example Response
+
+```json
+[
+  {
+    "detalle_id": 1,
+    "producto_id": 5,
+    "nombre": "Sofá Klippan 2 plazas",
+    "cantidad": 1,
+    "precioUnitario": 299.00,
+    "subtotal": 299.00
+  },
+  {
+    "detalle_id": 2,
+    "producto_id": 12,
+    "nombre": "Mesa de centro Lack",
+    "cantidad": 2,
+    "precioUnitario": 49.99,
+    "subtotal": 99.98
+  }
+]
+```
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Order details retrieved successfully
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid JWT token
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  User does not have permission to view this order
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Order with specified ID not found
+</ResponseField>
+
+## Use Cases
+
+- **Order summary**: Display itemized breakdown of an order
+- **Invoice generation**: Get line items for creating invoices
+- **Order modification**: Retrieve current items before allowing edits
+- **Inventory tracking**: Track which products were sold in each order
+
+<Note>
+  Prices in order details are locked at the time of purchase and may differ from current product prices.
+</Note>

@@ -1,0 +1,158 @@
+---
+title: "Add Item to Order"
+api: "POST /api/pedidos/{pedidoId}/detalles"
+description: "Add a new line item to an existing order"
+---
+
+## Authentication
+
+<Warning>
+  This endpoint requires JWT authentication. Include the Bearer token in the Authorization header.
+</Warning>
+
+## Path Parameters
+
+<ParamField path="pedidoId" type="long" required>
+  The unique identifier of the order to which you want to add an item
+</ParamField>
+
+## Request Body
+
+<ParamField body="producto_id" type="long" required>
+  ID of the product to add to the order
+</ParamField>
+
+<ParamField body="cantidad" type="integer" required>
+  Quantity of the product to add (must be greater than 0)
+</ParamField>
+
+<ParamField body="precioUnitario" type="number" required>
+  Price per unit for this line item. Typically the current product price at time of addition.
+</ParamField>
+
+## Response
+
+Returns the newly created order detail object.
+
+<ResponseField name="detalle_id" type="long">
+  Unique identifier for the new line item
+</ResponseField>
+
+<ResponseField name="producto_id" type="long">
+  ID of the product added
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  Product name
+</ResponseField>
+
+<ResponseField name="cantidad" type="integer">
+  Quantity ordered
+</ResponseField>
+
+<ResponseField name="precioUnitario" type="number">
+  Price per unit
+</ResponseField>
+
+<ResponseField name="subtotal" type="number">
+  Line total (cantidad × precioUnitario)
+</ResponseField>
+
+## Example Request
+
+```bash cURL
+curl -X POST "http://localhost:8080/api/pedidos/123/detalles" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "producto_id": 5,
+    "cantidad": 2,
+    "precioUnitario": 299.00
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/api/pedidos/123/detalles', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    producto_id: 5,
+    cantidad: 2,
+    precioUnitario: 299.00
+  })
+});
+const newDetail = await response.json();
+```
+
+```python Python
+import requests
+
+headers = {
+    'Authorization': f'Bearer {token}',
+    'Content-Type': 'application/json'
+}
+data = {
+    'producto_id': 5,
+    'cantidad': 2,
+    'precioUnitario': 299.00
+}
+response = requests.post(
+    'http://localhost:8080/api/pedidos/123/detalles',
+    headers=headers,
+    json=data
+)
+detail = response.json()
+```
+
+## Example Response
+
+```json
+{
+  "detalle_id": 45,
+  "producto_id": 5,
+  "nombre": "Sofá Klippan 2 plazas",
+  "cantidad": 2,
+  "precioUnitario": 299.00,
+  "subtotal": 598.00
+}
+```
+
+## Status Codes
+
+<ResponseField name="201" type="Created">
+  Order detail added successfully
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Invalid request body (e.g., negative quantity, missing fields)
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid JWT token
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  User does not have permission to modify this order
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Order or product with specified ID not found
+</ResponseField>
+
+## Use Cases
+
+- **Order modification**: Add items to an existing order before it's finalized
+- **Upselling**: Allow customers to add additional items during checkout
+- **Admin adjustments**: Enable administrators to manually add items to orders
+- **Bulk ordering**: Add multiple items to an order programmatically
+
+<Note>
+  The price is locked at the time the item is added. Subsequent product price changes won't affect this order detail.
+</Note>
+
+<Warning>
+  Ensure the order status allows modifications. Some order states (e.g., ENVIADO, ENTREGADO) may not permit adding items.
+</Warning>

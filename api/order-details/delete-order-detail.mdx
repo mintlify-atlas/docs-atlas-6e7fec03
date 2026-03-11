@@ -1,0 +1,104 @@
+---
+title: "Remove Item from Order"
+api: "DELETE /api/detalles/{detalleId}"
+description: "Remove a specific line item from an order"
+---
+
+## Authentication
+
+<Warning>
+  This endpoint requires JWT authentication. Include the Bearer token in the Authorization header.
+</Warning>
+
+## Path Parameters
+
+<ParamField path="detalleId" type="long" required>
+  The unique identifier of the order detail (line item) to remove
+</ParamField>
+
+## Response
+
+This endpoint returns no content on successful deletion.
+
+## Example Request
+
+```bash cURL
+curl -X DELETE "http://localhost:8080/api/detalles/45" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/api/detalles/45', {
+  method: 'DELETE',
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+
+if (response.ok) {
+  console.log('Item removed from order');
+}
+```
+
+```python Python
+import requests
+
+headers = {
+    'Authorization': f'Bearer {token}'
+}
+response = requests.delete(
+    'http://localhost:8080/api/detalles/45',
+    headers=headers
+)
+
+if response.status_code == 204:
+    print('Item removed successfully')
+```
+
+## Status Codes
+
+<ResponseField name="204" type="No Content">
+  Order detail deleted successfully
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid JWT token
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  User does not have permission to modify this order
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Order detail with specified ID not found
+</ResponseField>
+
+## Use Cases
+
+- **Cart management**: Remove unwanted items from shopping cart
+- **Order corrections**: Delete incorrect line items
+- **Inventory constraints**: Remove items that are no longer available
+- **Customer cancellations**: Allow customers to remove items before order finalization
+
+<Note>
+  Deleting an order detail permanently removes it from the order. This action cannot be undone.
+</Note>
+
+<Warning>
+  Ensure the order status allows modifications. Some order states may not permit removing items.
+</Warning>
+
+<Tip>
+  Alternatively, you can set the quantity to 0 using the [Update Order Item Quantity](/api/order-details/update-order-detail) endpoint to achieve the same result.
+</Tip>
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Update Quantity" href="/api/order-details/update-order-detail">
+    Modify item quantity (can also delete by setting to 0)
+  </Card>
+  <Card title="Get Order Details" href="/api/order-details/get-order-details">
+    View all items in an order
+  </Card>
+</CardGroup>

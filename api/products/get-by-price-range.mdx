@@ -1,0 +1,184 @@
+---
+title: "Get Products by Price Range"
+api: "GET /api/productos/precio"
+description: "Retrieve products within a specified price range"
+---
+
+## Authentication
+
+This endpoint is publicly accessible and does not require authentication.
+
+## Query Parameters
+
+<ParamField query="min" type="number" required>
+  Minimum price (inclusive). Must be a positive decimal number.
+</ParamField>
+
+<ParamField query="max" type="number" required>
+  Maximum price (inclusive). Must be greater than or equal to the minimum price.
+</ParamField>
+
+## Response
+
+Returns an array of product objects that fall within the specified price range.
+
+<ResponseField name="productos" type="array">
+  Array of product objects matching the price criteria
+  
+  <Expandable title="Product Object">
+    <ResponseField name="producto_id" type="long">
+      Unique identifier for the product
+    </ResponseField>
+    <ResponseField name="sku" type="string">
+      Stock Keeping Unit - unique product code
+    </ResponseField>
+    <ResponseField name="nombre" type="string">
+      Product name
+    </ResponseField>
+    <ResponseField name="descripcion" type="string">
+      Detailed product description
+    </ResponseField>
+    <ResponseField name="precioCantidad" type="number">
+      Product price amount (used for filtering)
+    </ResponseField>
+    <ResponseField name="precioMoneda" type="string">
+      Currency code (e.g., "EUR", "USD")
+    </ResponseField>
+    <ResponseField name="dimensionesAlto" type="number">
+      Product height in centimeters
+    </ResponseField>
+    <ResponseField name="dimensionesAncho" type="number">
+      Product width in centimeters
+    </ResponseField>
+    <ResponseField name="dimensionesProfundo" type="number">
+      Product depth in centimeters
+    </ResponseField>
+    <ResponseField name="es_destacado" type="boolean">
+      Whether the product is featured
+    </ResponseField>
+    <ResponseField name="stock" type="integer">
+      Available quantity in inventory
+    </ResponseField>
+    <ResponseField name="imagen_url" type="string">
+      URL to the product image
+    </ResponseField>
+    <ResponseField name="categoria" type="object">
+      Category information
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Requests
+
+<CodeGroup>
+
+```bash Products under 500 EUR
+curl -X GET "http://localhost:8080/api/productos/precio?min=0&max=500"
+```
+
+```bash Mid-range products (500-1500 EUR)
+curl -X GET "http://localhost:8080/api/productos/precio?min=500&max=1500"
+```
+
+```bash Premium products (1500+ EUR)
+curl -X GET "http://localhost:8080/api/productos/precio?min=1500&max=10000"
+```
+
+</CodeGroup>
+
+```javascript JavaScript
+// Filter products between 200 and 800 EUR
+const min = 200;
+const max = 800;
+const response = await fetch(
+  `http://localhost:8080/api/productos/precio?min=${min}&max=${max}`
+);
+const products = await response.json();
+console.log(`Found ${products.length} products in price range`);
+```
+
+```python Python
+import requests
+
+# Get products between 300 and 1000 EUR
+params = {
+    'min': 300,
+    'max': 1000
+}
+response = requests.get(
+    'http://localhost:8080/api/productos/precio',
+    params=params
+)
+products = response.json()
+print(f'Found {len(products)} products')
+```
+
+## Example Response
+
+```json
+[
+  {
+    "producto_id": 1,
+    "sku": "SOFA-001",
+    "nombre": "Sofá Klippan 2 plazas",
+    "descripcion": "Sofá compacto y versátil con funda lavable",
+    "precioCantidad": 299.00,
+    "precioMoneda": "EUR",
+    "dimensionesAlto": 66,
+    "dimensionesAncho": 180,
+    "dimensionesProfundo": 88,
+    "es_destacado": true,
+    "stock": 12,
+    "imagen_url": "https://example.com/sofa-klippan.jpg",
+    "categoria": {
+      "categoria_id": 1,
+      "nombre": "Salón",
+      "slug": "salon"
+    }
+  },
+  {
+    "producto_id": 5,
+    "sku": "MESA-003",
+    "nombre": "Mesa de centro Lack",
+    "descripcion": "Mesa de centro moderna con acabado blanco",
+    "precioCantidad": 49.99,
+    "precioMoneda": "EUR",
+    "dimensionesAlto": 45,
+    "dimensionesAncho": 90,
+    "dimensionesProfundo": 55,
+    "es_destacado": false,
+    "stock": 28,
+    "imagen_url": "https://example.com/mesa-lack.jpg",
+    "categoria": {
+      "categoria_id": 3,
+      "nombre": "Mesas",
+      "slug": "mesas"
+    }
+  }
+]
+```
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Products retrieved successfully. Returns an empty array if no products match the criteria.
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Invalid parameters (e.g., min > max, negative values, missing parameters)
+</ResponseField>
+
+## Use Cases
+
+- **Price filtering**: Allow customers to filter products by budget
+- **Sales and promotions**: Find products in specific price tiers
+- **Comparison shopping**: Show products within a customer's price range
+- **Inventory analysis**: Identify products in different price segments
+
+<Tip>
+  Combine this endpoint with other filters (category, search) on the frontend to create a comprehensive product filtering experience.
+</Tip>
+
+<Note>
+  The price comparison uses the `precioCantidad` field. All products are assumed to be in the same currency for comparison purposes.
+</Note>

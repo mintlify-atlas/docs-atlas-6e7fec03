@@ -91,6 +91,8 @@
             "pages": [
               "api/products/list-products",
               "api/products/get-product",
+              "api/products/get-product-by-sku",
+              "api/products/get-by-price-range",
               "api/products/create-product",
               "api/products/update-product",
               "api/products/delete-product",
@@ -120,10 +122,20 @@
             ]
           },
           {
+            "group": "Order Details",
+            "pages": [
+              "api/order-details/get-order-details",
+              "api/order-details/add-order-detail",
+              "api/order-details/update-order-detail",
+              "api/order-details/delete-order-detail"
+            ]
+          },
+          {
             "group": "Users",
             "pages": [
               "api/users/list-users",
               "api/users/get-user",
+              "api/users/create-user",
               "api/users/update-user",
               "api/users/delete-user"
             ]

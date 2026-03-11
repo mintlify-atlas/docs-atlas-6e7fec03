@@ -1,0 +1,143 @@
+---
+title: "Get Product by SKU"
+api: "GET /api/productos/sku/{sku}"
+description: "Retrieve a single product by its Stock Keeping Unit (SKU)"
+---
+
+## Authentication
+
+This endpoint is publicly accessible and does not require authentication.
+
+## Path Parameters
+
+<ParamField path="sku" type="string" required>
+  The Stock Keeping Unit (SKU) - a unique product code used for inventory management
+</ParamField>
+
+## Response
+
+Returns a single product object with complete details.
+
+<ResponseField name="producto_id" type="long">
+  Unique identifier for the product
+</ResponseField>
+
+<ResponseField name="sku" type="string">
+  Stock Keeping Unit - unique product code
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  Product name
+</ResponseField>
+
+<ResponseField name="descripcion" type="string">
+  Detailed product description
+</ResponseField>
+
+<ResponseField name="precioCantidad" type="number">
+  Product price amount
+</ResponseField>
+
+<ResponseField name="precioMoneda" type="string">
+  Currency code (e.g., "EUR", "USD")
+</ResponseField>
+
+<ResponseField name="dimensionesAlto" type="number">
+  Product height in centimeters
+</ResponseField>
+
+<ResponseField name="dimensionesAncho" type="number">
+  Product width in centimeters
+</ResponseField>
+
+<ResponseField name="dimensionesProfundo" type="number">
+  Product depth in centimeters
+</ResponseField>
+
+<ResponseField name="es_destacado" type="boolean">
+  Whether the product is featured
+</ResponseField>
+
+<ResponseField name="stock" type="integer">
+  Available quantity in inventory
+</ResponseField>
+
+<ResponseField name="imagen_url" type="string">
+  URL to the product image
+</ResponseField>
+
+<ResponseField name="categoria" type="object">
+  <Expandable title="properties">
+    <ResponseField name="categoria_id" type="long">
+      Category unique identifier
+    </ResponseField>
+    <ResponseField name="nombre" type="string">
+      Category name
+    </ResponseField>
+    <ResponseField name="slug" type="string">
+      URL-friendly category identifier
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+```bash cURL
+curl -X GET "http://localhost:8080/api/productos/sku/SOFA-001"
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/api/productos/sku/SOFA-001');
+const product = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get('http://localhost:8080/api/productos/sku/SOFA-001')
+product = response.json()
+```
+
+## Example Response
+
+```json
+{
+  "producto_id": 1,
+  "sku": "SOFA-001",
+  "nombre": "Sofá Klippan 2 plazas",
+  "descripcion": "Sofá compacto y versátil con funda lavable",
+  "precioCantidad": 299.00,
+  "precioMoneda": "EUR",
+  "dimensionesAlto": 66,
+  "dimensionesAncho": 180,
+  "dimensionesProfundo": 88,
+  "es_destacado": true,
+  "stock": 12,
+  "imagen_url": "https://example.com/sofa-klippan.jpg",
+  "categoria": {
+    "categoria_id": 1,
+    "nombre": "Salón",
+    "slug": "salon"
+  }
+}
+```
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Product found and returned successfully
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  No product found with the specified SKU
+</ResponseField>
+
+## Use Cases
+
+- **Barcode scanning**: Look up products using scanned SKU codes
+- **Inventory management**: Retrieve product details by SKU for stock operations
+- **External integrations**: Sync products with external systems using SKU as the key
+
+<Note>
+  SKU codes are unique across all products. This endpoint is commonly used in warehouse management and point-of-sale systems.
+</Note>

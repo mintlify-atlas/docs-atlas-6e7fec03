@@ -1,0 +1,171 @@
+---
+title: "Update Order Item Quantity"
+api: "PUT /api/detalles/{detalleId}"
+description: "Update the quantity of a specific order line item"
+---
+
+## Authentication
+
+<Warning>
+  This endpoint requires JWT authentication. Include the Bearer token in the Authorization header.
+</Warning>
+
+## Path Parameters
+
+<ParamField path="detalleId" type="long" required>
+  The unique identifier of the order detail (line item) to update
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="cantidad" type="integer" required>
+  New quantity for this line item. Must be a non-negative integer.
+  - If set to 0, the line item will be deleted from the order
+  - If greater than 0, the quantity will be updated
+</ParamField>
+
+## Response
+
+<Tabs>
+  <Tab title="Quantity Updated (cantidad > 0)">
+    Returns the updated order detail object with recalculated subtotal.
+
+    <ResponseField name="detalle_id" type="long">
+      Unique identifier for this line item
+    </ResponseField>
+    <ResponseField name="producto_id" type="long">
+      ID of the product
+    </ResponseField>
+    <ResponseField name="nombre" type="string">
+      Product name
+    </ResponseField>
+    <ResponseField name="cantidad" type="integer">
+      Updated quantity
+    </ResponseField>
+    <ResponseField name="precioUnitario" type="number">
+      Price per unit (unchanged)
+    </ResponseField>
+    <ResponseField name="subtotal" type="number">
+      Recalculated line total (cantidad × precioUnitario)
+    </ResponseField>
+  </Tab>
+  
+  <Tab title="Item Deleted (cantidad = 0)">
+    Returns 204 No Content when the line item is deleted due to quantity being set to 0.
+  </Tab>
+</Tabs>
+
+## Example Requests
+
+<CodeGroup>
+
+```bash Update quantity to 3
+curl -X PUT "http://localhost:8080/api/detalles/45?cantidad=3" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```bash Remove item (set quantity to 0)
+curl -X PUT "http://localhost:8080/api/detalles/45?cantidad=0" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+</CodeGroup>
+
+```javascript JavaScript
+// Update quantity
+const response = await fetch(
+  'http://localhost:8080/api/detalles/45?cantidad=3',
+  {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  }
+);
+
+if (response.status === 204) {
+  console.log('Item removed from order');
+} else {
+  const updatedDetail = await response.json();
+  console.log('New subtotal:', updatedDetail.subtotal);
+}
+```
+
+```python Python
+import requests
+
+headers = {
+    'Authorization': f'Bearer {token}'
+}
+
+# Update quantity to 5
+response = requests.put(
+    'http://localhost:8080/api/detalles/45',
+    params={'cantidad': 5},
+    headers=headers
+)
+
+if response.status_code == 204:
+    print('Item removed')
+else:
+    detail = response.json()
+    print(f'Updated quantity: {detail["cantidad"]}')
+```
+
+## Example Response (Quantity > 0)
+
+```json
+{
+  "detalle_id": 45,
+  "producto_id": 5,
+  "nombre": "Sofá Klippan 2 plazas",
+  "cantidad": 3,
+  "precioUnitario": 299.00,
+  "subtotal": 897.00
+}
+```
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Quantity updated successfully (when cantidad > 0)
+</ResponseField>
+
+<ResponseField name="204" type="No Content">
+  Line item deleted successfully (when cantidad = 0)
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Invalid quantity parameter (e.g., negative value, missing parameter)
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid JWT token
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  User does not have permission to modify this order
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Order detail with specified ID not found
+</ResponseField>
+
+## Use Cases
+
+- **Cart updates**: Allow customers to adjust item quantities before checkout
+- **Order corrections**: Fix quantity mistakes in orders
+- **Inventory adjustments**: Modify order quantities based on stock availability
+- **Bulk quantity changes**: Update quantities programmatically
+
+<Tip>
+  Setting quantity to 0 is an alternative way to remove an item from an order, equivalent to using the DELETE endpoint.
+</Tip>
+
+<Note>
+  The unit price remains unchanged when updating quantity. Only the subtotal is recalculated.
+</Note>
+
+<Warning>
+  Verify that the order status allows modifications before attempting to update quantities.
+</Warning>
