@@ -1,0 +1,498 @@
+---
+title: 'Database Errors'
+description: 'Troubleshooting MySQL database issues in Iquea Commerce'
+icon: 'database'
+---
+
+This guide helps you resolve common database-related errors. The application uses MySQL with the connection details configured in `application.properties`.
+
+## Database Configuration
+
+The application connects to MySQL using these settings (from `application.properties`):
+
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/apiIquea?createDatabaseIfNotExist=true
+spring.datasource.username=${DB_USERNAME:root}
+spring.datasource.password=${DB_PASSWORD:MCS_47_2006}
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+```
+
+## Connection Issues
+
+<Accordion title="Connection refused errors">
+
+**Error Message:**
+```
+com.mysql.cj.jdbc.exceptions.CommunicationsException: 
+Communications link failure
+
+The last packet sent successfully to the server was 0 milliseconds ago.
+The driver has not received any packets from the server.
+```
+
+**Causes & Solutions:**
+
+1. **MySQL is not running:**
+```bash
+# Check status
+sudo systemctl status mysql
+
+# Start MySQL
+sudo systemctl start mysql
+
+# Enable auto-start on boot
+sudo systemctl enable mysql
+```
+
+On macOS:
+```bash
+mysql.server start
+```
+
+On Windows:
+```bash
+net start MySQL80
+```
+
+2. **Wrong host or port:**
+   - Verify MySQL is listening on port 3306:
+```bash
+sudo netstat -tlnp | grep 3306
+# or
+sudo lsof -i :3306
+```
+
+3. **Firewall blocking connection:**
+```bash
+# Linux
+sudo ufw allow 3306
+
+# Check iptables
+sudo iptables -L | grep 3306
+```
+
+4. **MySQL bound to wrong interface:**
+   - Edit `/etc/mysql/mysql.conf.d/mysqld.cnf`:
+```ini
+bind-address = 127.0.0.1
+# or for all interfaces (development only):
+bind-address = 0.0.0.0
+```
+   - Restart MySQL after changes
+
+<Warning>
+Never bind MySQL to 0.0.0.0 in production without proper firewall rules.
+</Warning>
+
+</Accordion>
+
+<Accordion title="Authentication failures">
+
+**Error Messages:**
+```
+Access denied for user 'root'@'localhost' (using password: YES)
+```
+
+**Solutions:**
+
+1. **Verify credentials:**
+   - Default username: `root`
+   - Default password: `MCS_47_2006` (as configured)
+   - Test connection:
+```bash
+mysql -u root -p
+# Enter password when prompted
+```
+
+2. **Use environment variables (recommended for security):**
+```bash
+export DB_USERNAME=root
+export DB_PASSWORD=your_password
+```
+
+Or create `.env` file (DO NOT commit to git):
+```properties
+DB_USERNAME=root
+DB_PASSWORD=your_secure_password
+```
+
+3. **Reset MySQL root password:**
+```bash
+# Stop MySQL
+sudo systemctl stop mysql
+
+# Start in safe mode
+sudo mysqld_safe --skip-grant-tables &
+
+# Connect and reset password
+mysql -u root
+```
+```sql
+FLUSH PRIVILEGES;
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'new_password';
+FLUSH PRIVILEGES;
+EXIT;
+```
+```bash
+# Restart MySQL normally
+sudo systemctl restart mysql
+```
+
+4. **Authentication plugin issue:**
+```sql
+-- Connect as root
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'MCS_47_2006';
+FLUSH PRIVILEGES;
+```
+
+<Note>
+The application uses environment variables with defaults. Set `DB_USERNAME` and `DB_PASSWORD` environment variables to override defaults.
+</Note>
+
+</Accordion>
+
+## Schema Issues
+
+<Accordion title="Table not found errors">
+
+**Error Message:**
+```
+Table 'apiIquea.productos' doesn't exist
+Table 'apiIquea.users' doesn't exist
+```
+
+**Causes & Solutions:**
+
+1. **Database doesn't exist:**
+   - The connection URL includes `createDatabaseIfNotExist=true`, but verify:
+```sql
+SHOW DATABASES;
+USE apiIquea;
+SHOW TABLES;
+```
+
+2. **Tables not created by Hibernate:**
+   - Check `application.properties:19`:
+```properties
+spring.jpa.hibernate.ddl-auto=update
+```
+   - For fresh start, change to `create` temporarily (WARNING: deletes data):
+```properties
+spring.jpa.hibernate.ddl-auto=create
+```
+   - Then change back to `update`
+
+3. **Entity classes have errors:**
+   - Check entity annotations: `@Entity`, `@Table(name="...")`
+   - Verify naming strategy in `application.properties:37`:
+```properties
+spring.jpa.hibernate.naming.physical-strategy=org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+```
+
+4. **Manual table creation:**
+```sql
+CREATE DATABASE IF NOT EXISTS apiIquea;
+USE apiIquea;
+
+-- Check entity classes for exact schema
+SHOW CREATE TABLE productos;
+```
+
+5. **Initial data not loaded:**
+   - Verify `data.sql` exists at `src/main/resources/data.sql`
+   - Check configuration:
+```properties
+spring.sql.init.mode=always
+spring.jpa.defer-datasource-initialization=true
+spring.sql.init.data-locations=classpath:data.sql
+```
+
+</Accordion>
+
+<Accordion title="Column or field errors">
+
+**Error Messages:**
+```
+Unknown column 'field_name' in 'field list'
+Column 'column_name' cannot be null
+```
+
+**Solutions:**
+
+1. **Schema out of sync with entities:**
+```bash
+# View generated SQL
+# Set in application.properties:22
+spring.jpa.show-sql=true
+```
+
+2. **Force schema update:**
+```sql
+-- Backup data first!
+DROP DATABASE apiIquea;
+CREATE DATABASE apiIquea;
+```
+   - Restart application (Hibernate will recreate tables)
+
+3. **Check entity field annotations:**
+```java
+@Column(name = "exact_column_name", nullable = false)
+private String fieldName;
+```
+
+4. **Verify physical naming strategy:**
+   - With `PhysicalNamingStrategyStandardImpl`, names are used as-is
+   - Entity field `fieldName` → column `fieldName` (not `field_name`)
+
+</Accordion>
+
+## Character Encoding Issues
+
+<Accordion title="UTF-8 encoding errors and special characters">
+
+**Problems:**
+- Special characters (á, é, í, ó, ú, ñ, ü) display as �� or ?
+- Error: `Incorrect string value: '\xC3\xBC...'`
+
+**Solutions:**
+
+1. **Add charset to connection URL:**
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/apiIquea?createDatabaseIfNotExist=true&characterEncoding=utf8mb4&useUnicode=true
+```
+
+2. **Set database charset:**
+```sql
+ALTER DATABASE apiIquea CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+```
+
+3. **Set table charset:**
+```sql
+ALTER TABLE productos CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+ALTER TABLE categorias CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+4. **Check column charset:**
+```sql
+SHOW FULL COLUMNS FROM productos;
+```
+
+5. **Verify MySQL configuration:**
+   - Edit `/etc/mysql/mysql.conf.d/mysqld.cnf`:
+```ini
+[mysqld]
+character-set-server=utf8mb4
+collation-server=utf8mb4_unicode_ci
+
+[client]
+default-character-set=utf8mb4
+```
+   - Restart MySQL
+
+6. **Add to application.properties:**
+```properties
+spring.jpa.properties.hibernate.connection.characterEncoding=utf8mb4
+spring.jpa.properties.hibernate.connection.useUnicode=true
+```
+
+<Note>
+Use `utf8mb4` instead of `utf8` for full Unicode support, including emojis and special characters. This is especially important for "Iqüea" with the umlaut.
+</Note>
+
+</Accordion>
+
+## Constraint Violations
+
+<Accordion title="Foreign key constraint failures">
+
+**Error Message:**
+```
+Cannot add or update a child row: a foreign key constraint fails
+(`apiIquea`.`productos`, CONSTRAINT `fk_categoria` 
+FOREIGN KEY (`categoria_id`) REFERENCES `categorias` (`id`))
+```
+
+**Causes & Solutions:**
+
+1. **Referenced record doesn't exist:**
+```sql
+-- Check if categoria exists
+SELECT * FROM categorias WHERE id = <categoria_id>;
+
+-- Create missing categoria first
+INSERT INTO categorias (id, nombre) VALUES (<id>, '<nombre>');
+```
+
+2. **Trying to delete parent with existing children:**
+```sql
+-- Check dependent records
+SELECT * FROM productos WHERE categoria_id = <id>;
+
+-- Delete children first, or update to NULL/another category
+UPDATE productos SET categoria_id = NULL WHERE categoria_id = <id>;
+-- Then delete parent
+DELETE FROM categorias WHERE id = <id>;
+```
+
+3. **Load order in data.sql:**
+   - Ensure parent tables are populated before children
+```sql
+-- data.sql structure:
+-- 1. Insert categorias first
+INSERT INTO categorias (id, nombre) VALUES (1, 'Muebles');
+
+-- 2. Then insert productos
+INSERT INTO productos (id, nombre, categoria_id) VALUES (1, 'Silla', 1);
+```
+
+4. **Temporarily disable constraints (use carefully):**
+```sql
+SET FOREIGN_KEY_CHECKS=0;
+-- Your operations here
+SET FOREIGN_KEY_CHECKS=1;
+```
+
+<Warning>
+Disabling foreign key checks can lead to data integrity issues. Only use for data migration or testing.
+</Warning>
+
+</Accordion>
+
+<Accordion title="Unique constraint violations">
+
+**Error Message:**
+```
+Duplicate entry 'value' for key 'unique_constraint_name'
+```
+
+**Solutions:**
+
+1. **Check for existing records:**
+```sql
+SELECT * FROM users WHERE email = 'user@example.com';
+```
+
+2. **Update instead of insert:**
+```sql
+-- Use ON DUPLICATE KEY UPDATE
+INSERT INTO users (email, password) VALUES ('user@example.com', 'hash')
+ON DUPLICATE KEY UPDATE password = 'hash';
+```
+
+3. **Handle in application code:**
+```java
+try {
+    userRepository.save(user);
+} catch (DataIntegrityViolationException e) {
+    // Handle duplicate
+}
+```
+
+</Accordion>
+
+<Accordion title="Data too long for column">
+
+**Error Message:**
+```
+Data truncation: Data too long for column 'column_name' at row 1
+```
+
+**Solutions:**
+
+1. **Check column definition:**
+```sql
+DESC productos;
+-- Shows column types and sizes
+```
+
+2. **Increase column size:**
+```sql
+ALTER TABLE productos MODIFY descripcion TEXT;
+-- or
+ALTER TABLE productos MODIFY nombre VARCHAR(500);
+```
+
+3. **Update entity annotation:**
+```java
+@Column(length = 500)
+private String nombre;
+
+@Lob // For large text
+@Column(columnDefinition = "TEXT")
+private String descripcion;
+```
+
+4. **Validate input length in application:**
+```java
+@Size(max = 255)
+private String nombre;
+```
+
+</Accordion>
+
+## Performance Issues
+
+<Accordion title="Slow queries and N+1 problems">
+
+**Solutions:**
+
+1. **Enable SQL logging to identify slow queries:**
+```properties
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+logging.level.org.hibernate.SQL=DEBUG
+logging.level.org.hibernate.type.descriptor.sql.BasicBinder=TRACE
+```
+
+2. **Use JOIN FETCH to avoid N+1:**
+```java
+@Query("SELECT p FROM Producto p JOIN FETCH p.categoria")
+List<Producto> findAllWithCategoria();
+```
+
+3. **Add database indexes:**
+```sql
+CREATE INDEX idx_categoria_id ON productos(categoria_id);
+CREATE INDEX idx_user_email ON users(email);
+```
+
+4. **Check query execution plan:**
+```sql
+EXPLAIN SELECT * FROM productos WHERE categoria_id = 1;
+```
+
+</Accordion>
+
+## Diagnostic Commands
+
+Useful commands for troubleshooting:
+
+```sql
+-- Check connection
+SHOW PROCESSLIST;
+
+-- Database info
+SHOW DATABASES;
+USE apiIquea;
+SHOW TABLES;
+SHOW CREATE TABLE productos;
+
+-- Character set info
+SHOW VARIABLES LIKE 'char%';
+SHOW VARIABLES LIKE 'collation%';
+
+-- User permissions
+SHOW GRANTS FOR 'root'@'localhost';
+
+-- Table status
+SHOW TABLE STATUS FROM apiIquea;
+
+-- Error log location
+SHOW VARIABLES LIKE 'log_error';
+```
+
+## Additional Resources
+
+- [Common Issues](/troubleshooting/common-issues) - General troubleshooting
+- [CORS Issues](/troubleshooting/cors-issues) - Frontend-backend communication
+- [MySQL Documentation](https://dev.mysql.com/doc/) - Official MySQL docs

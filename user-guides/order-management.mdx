@@ -1,0 +1,359 @@
+---
+title: Order Management
+description: View your order history, track order status, and review order details in Iquea Commerce
+---
+
+## Overview
+
+Once you complete checkout, orders are created in the system with tracking information. This guide explains how to view and manage your orders.
+
+## Understanding Orders
+
+Each order in Iquea Commerce contains:
+
+- **Order ID** (`pedido_id`): Unique numeric identifier
+- **Reference Code** (`referencia`): Human-readable order reference
+- **Creation Date** (`fecha_creacion`): When the order was placed
+- **Status** (`estado`): Current order state
+- **Total** (`total`): Total order amount in euros
+- **Order Details** (`detalles`): Line items with products and quantities
+
+## Order Statuses
+
+Orders progress through different states:
+
+<Steps>
+  <Step title="PENDIENTE" icon="clock">
+    **Pending** - Order created but not yet confirmed
+    
+    This is the initial state when an order is placed. Payment may be processing.
+  </Step>
+
+  <Step title="CONFIRMADO" icon="check">
+    **Confirmed** - Order confirmed and accepted
+    
+    Payment received, order is being prepared for shipment.
+  </Step>
+
+  <Step title="ENVIADO" icon="truck">
+    **Shipped** - Order has been dispatched
+    
+    Items are in transit to the delivery address.
+  </Step>
+
+  <Step title="ENTREGADO" icon="box-check">
+    **Delivered** - Order successfully delivered
+    
+    Customer has received the items. Order complete.
+  </Step>
+
+  <Step title="CANCELADO" icon="x">
+    **Cancelled** - Order cancelled
+    
+    Order was cancelled by customer or admin. No delivery will occur.
+  </Step>
+</Steps>
+
+## Viewing Order History
+
+Access your complete order history through the orders page:
+
+<Steps>
+  <Step title="Navigate to Orders">
+    Click **"Orders"** or **"Pedidos"** in the main navigation menu
+  </Step>
+
+  <Step title="View Order List">
+    All your orders are displayed in a list or table format showing:
+    - Order reference code
+    - Creation date
+    - Current status
+    - Total amount
+  </Step>
+
+  <Step title="Filter by Status">
+    You can filter orders by status if the interface provides status filters
+  </Step>
+</Steps>
+
+### Order List Information
+
+Each order in the list displays key information at a glance:
+
+| Field | Description | Example |
+|-------|-------------|----------|
+| **Referencia** | Unique order reference | `ORD-2025-12345` |
+| **Fecha** | Order creation date | `2025-03-11` |
+| **Estado** | Current status | `CONFIRMADO` |
+| **Total** | Order total amount | `1,299.00 €` |
+
+## Viewing Order Details
+
+Click on any order to view comprehensive details:
+
+<Steps>
+  <Step title="Select Order">
+    Click on an order reference code from your order list
+  </Step>
+
+  <Step title="View Order Header">
+    See order metadata:
+    - Full reference code
+    - Exact creation timestamp
+    - Current status with visual indicator
+    - Total amount
+  </Step>
+
+  <Step title="Review Order Items">
+    Each line item shows:
+    - Product name
+    - Product image thumbnail
+    - Unit price
+    - Quantity ordered
+    - Line subtotal (price × quantity)
+  </Step>
+
+  <Step title="Verify Order Total">
+    The sum of all line subtotals equals the order total
+  </Step>
+</Steps>
+
+## Order Detail Components
+
+### Order Details Structure
+
+Each order contains multiple detail items (`DetallePedido`):
+
+```typescript
+interface DetallePedido {
+  detalle_id: number;        // Unique detail line ID
+  producto: ProductoResumen; // Product summary
+  cantidad: number;          // Quantity ordered
+  precioUnitario: number;   // Unit price at time of order
+  subtotal: number;         // cantidad × precioUnitario
+}
+```
+
+### Product Summary in Orders
+
+Order details include simplified product information:
+
+- **Product ID**: Database identifier
+- **Product Name**: Name at time of purchase
+- **Price**: Price when order was placed (locked)
+- **Image URL**: Product thumbnail
+
+<Note>
+Prices in orders reflect the price at the time of purchase, not current prices. This ensures order totals remain accurate even if product prices change.
+</Note>
+
+## Tracking Order Status
+
+### Status Progression
+
+Orders typically follow this lifecycle:
+
+```
+PENDIENTE → CONFIRMADO → ENVIADO → ENTREGADO
+```
+
+Orders can be cancelled at any point:
+
+```
+Any Status → CANCELADO
+```
+
+### Checking Order Status
+
+<Steps>
+  <Step title="Open Order Details">
+    Navigate to the specific order you want to track
+  </Step>
+
+  <Step title="View Status Badge">
+    The current status is prominently displayed, often with color coding:
+    - **PENDIENTE**: Yellow/Orange
+    - **CONFIRMADO**: Blue
+    - **ENVIADO**: Purple
+    - **ENTREGADO**: Green
+    - **CANCELADO**: Red
+  </Step>
+
+  <Step title="Check Last Update">
+    The order creation date shows when it was placed. Status changes may be timestamped if tracked.
+  </Step>
+</Steps>
+
+## API Endpoints for Orders
+
+The order management system uses these backend endpoints:
+
+### Available Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/pedidos` | GET | List all orders (admin or user's orders) |
+| `/api/pedidos/{id}` | GET | Get specific order by ID |
+| `/api/pedidos/estado/{estado}` | GET | Filter orders by status |
+| `/api/pedidos` | POST | Create new order |
+| `/api/pedidos/{id}` | PUT | Update order (admin) |
+| `/api/pedidos/{id}` | DELETE | Delete order (admin) |
+
+### Order Detail Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/pedidos/{id}/detalles` | GET | Get all details for an order |
+| `/api/pedidos/{id}/detalles` | POST | Add item to order |
+| `/api/detalles/{id}` | DELETE | Remove order line item |
+| `/api/detalles/{id}/cantidad` | PUT | Update quantity of line item |
+
+<Note>
+Some endpoints are admin-only. Regular users can only view their own orders.
+</Note>
+
+## Order Reference Codes
+
+Each order has a unique `referencia` field:
+
+- Used for customer communication
+- Easier to reference than numeric IDs
+- Follows a consistent format
+- Can be used for order lookup
+
+### Reference Format
+
+While the exact format depends on backend implementation, references typically include:
+
+- Prefix (e.g., "ORD" or "PED")
+- Year or date component
+- Sequential or random number
+
+**Example**: `ORD-2025-12345`
+
+## Creating Orders
+
+Orders are typically created through the checkout process, but can also be created via API:
+
+<Steps>
+  <Step title="Complete Cart Checkout">
+    The standard checkout flow creates an order automatically
+  </Step>
+
+  <Step title="Order Creation Request">
+    Backend receives POST to `/api/pedidos` with:
+    ```json
+    {
+      "usuario_id": 123
+    }
+    ```
+  </Step>
+
+  <Step title="Order Details Added">
+    Cart items are converted to order details:
+    - Each cart item becomes a `DetallePedido`
+    - Prices are locked at current values
+    - Stock is decremented (if tracked)
+  </Step>
+
+  <Step title="Order Confirmation">
+    Order is created with:
+    - Status: `PENDIENTE`
+    - Reference code generated
+    - Total calculated from details
+    - Creation timestamp set
+  </Step>
+</Steps>
+
+## Order Calculations
+
+### Line Item Subtotal
+
+Each order detail calculates its subtotal:
+
+```typescript
+subtotal = precioUnitario × cantidad
+```
+
+### Order Total
+
+The order total is the sum of all detail subtotals:
+
+```typescript
+total = sum of all detalle.subtotal
+```
+
+<Warning>
+Order totals are calculated server-side. Client-side cart totals may differ if prices change between cart view and checkout.
+</Warning>
+
+## User Permissions
+
+### Customer Access
+
+Regular users (role: `CLIENTE`) can:
+
+- View their own orders
+- View order details for their orders
+- Create new orders through checkout
+
+### What Customers Cannot Do
+
+- View other users' orders
+- Update order status
+- Delete orders
+- Modify order details after creation
+
+<Note>
+If you need to modify an order, contact support or an administrator. Once placed, orders cannot be self-edited.
+</Note>
+
+## Best Practices
+
+<Card title="Save Reference Codes" icon="bookmark">
+  Keep a record of your order reference codes for easy tracking and customer support inquiries.
+</Card>
+
+<Card title="Check Order Status Regularly" icon="refresh">
+  Monitor your order status to know when to expect delivery and confirm successful shipment.
+</Card>
+
+<Card title="Review Order Details" icon="eye">
+  Always review order details immediately after placement to ensure accuracy.
+</Card>
+
+<Card title="Report Issues Promptly" icon="bell">
+  If an order status doesn't update as expected, contact support with your reference code.
+</Card>
+
+## Troubleshooting
+
+### Cannot Find Order
+
+**Problem**: Order not appearing in order list
+
+**Solutions**:
+- Verify you're logged in with the correct account
+- Check if order was successfully created (look for confirmation)
+- Contact support with approximate order date
+
+### Order Stuck in PENDIENTE
+
+**Problem**: Order status not progressing
+
+**Solutions**:
+- Allow time for payment processing
+- Check payment method was successful
+- Contact support if pending for more than 24 hours
+
+### Incorrect Order Total
+
+**Problem**: Order total doesn't match cart total
+
+**Explanation**: Prices may have changed between viewing cart and completing checkout. Order total reflects prices at checkout time.
+
+## Related Guides
+
+- [Cart and Checkout](/user-guides/cart-checkout) - Complete purchases
+- [Shopping Guide](/user-guides/shopping) - Browse products
+- [Admin Panel](/user-guides/admin-panel) - Admin order management features

@@ -1,0 +1,104 @@
+---
+title: "Delete Product"
+api: "DELETE /api/productos/{id}"
+description: "Delete a product from the catalog (Admin only)"
+---
+
+## Authentication
+
+<Warning>
+  This endpoint requires administrator authentication. Include a valid JWT token in the Authorization header.
+</Warning>
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for admin authentication
+  
+  Example: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+</ParamField>
+
+## Path Parameters
+
+<ParamField path="id" type="long" required>
+  The unique identifier of the product to delete
+</ParamField>
+
+## Response
+
+This endpoint returns no content on success (204 status code).
+
+<RequestExample>
+```bash cURL
+curl --location --request DELETE 'https://api.iquea.com/api/productos/156' \
+--header 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+
+```javascript JavaScript
+const token = 'YOUR_ADMIN_TOKEN';
+const productId = 156;
+
+fetch(`https://api.iquea.com/api/productos/${productId}`, {
+  method: 'DELETE',
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+})
+.then(response => {
+  if (response.status === 204) {
+    console.log('Product deleted successfully');
+  }
+});
+```
+
+```python Python
+import requests
+
+token = 'YOUR_ADMIN_TOKEN'
+product_id = 156
+url = f'https://api.iquea.com/api/productos/{product_id}'
+
+headers = {
+    'Authorization': f'Bearer {token}'
+}
+
+response = requests.delete(url, headers=headers)
+
+if response.status_code == 204:
+    print('Product deleted successfully')
+```
+</RequestExample>
+
+<ResponseExample>
+```json 204 - No Content
+// No response body
+```
+
+```json 404 - Not Found
+{
+  "error": "Product not found"
+}
+```
+
+```json 403 - Forbidden
+{
+  "error": "Access denied. Administrator privileges required."
+}
+```
+</ResponseExample>
+
+## Status Codes
+
+<ResponseField name="204" type="No Content">
+  Product successfully deleted
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  Invalid or missing authentication token, or insufficient permissions
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Product with the specified ID does not exist
+</ResponseField>
+
+<Warning>
+  This action is permanent and cannot be undone. Ensure you have the correct product ID before deleting.
+</Warning>

@@ -1,0 +1,218 @@
+---
+title: Shopping Guide
+description: Learn how to browse products, search the catalog, and explore featured collections in Iquea Commerce
+---
+
+## Overview
+
+Iquea Commerce provides an intuitive shopping experience with featured collections, category browsing, and powerful search capabilities. This guide walks you through discovering and viewing products.
+
+## Browsing the Product Catalog
+
+The product catalog is accessible from the main navigation and displays all available furniture items.
+
+<Steps>
+  <Step title="Access the Product Catalog">
+    Navigate to **Products** from the main menu or click **"Ver todos los productos"** from the homepage.
+  </Step>
+
+  <Step title="View Product Grid">
+    Products are displayed in a grid layout showing:
+    - Product image
+    - Product name
+    - Category label
+    - Price in euros (€)
+    - Star rating
+  </Step>
+
+  <Step title="Check Product Count">
+    The total number of available products is displayed at the top of the catalog: **"X productos"**
+  </Step>
+</Steps>
+
+## Featured Products Section
+
+The homepage showcases a curated **Featured Collection** ("Colección Destacada") with up to 6 highlighted items.
+
+### What Makes Products Featured?
+
+- Featured products are marked with `es_destacado: true` in the system
+- The API endpoint `/api/productos/destacados` returns these special items
+- Featured items may display promotional badges (e.g., "-30%")
+
+<Note>
+Featured products represent hand-selected pieces that define contemporary elegance and are crafted with quality materials and timeless design.
+</Note>
+
+### Featured Section Details
+
+The featured section includes:
+- **Hero Image**: Large banner with the new 2025 collection
+- **Product Cards**: Visual grid of 6 selected products
+- **Ratings**: Star ratings (4-5 stars) displayed for each item
+- **Quick Access**: Direct links to product detail pages
+
+## Searching and Filtering Products
+
+### Search Functionality
+
+You can search for products by name using the search feature:
+
+<Steps>
+  <Step title="Enter Search Query">
+    Type your search term in the search bar (e.g., "Sofá", "Mesa", "Lámpara")
+  </Step>
+
+  <Step title="View Results">
+    The page header will show: **"Resultados para '[your query]'"**
+  </Step>
+
+  <Step title="Clear Search">
+    Remove the search query to return to the full catalog
+  </Step>
+</Steps>
+
+### Filter by Category
+
+Narrow down products using the category sidebar:
+
+<Steps>
+  <Step title="Open Category Filter">
+    View the **"Categorías"** section in the left sidebar
+  </Step>
+
+  <Step title="Select a Category">
+    Click on any category button:
+    - **Todas** - Show all products
+    - **Salón** - Living room furniture
+    - **Comedor** - Dining room furniture
+    - **Dormitorio** - Bedroom furniture
+    - **Iluminación** - Lighting
+    - **Mesas** - Tables
+  </Step>
+
+  <Step title="Active Category Highlight">
+    The selected category button will be highlighted as **active**
+  </Step>
+</Steps>
+
+### Filter by Price Range
+
+Refine your search by setting minimum and maximum price limits:
+
+<Steps>
+  <Step title="Locate Price Filter">
+    Find the **"Precio (€)"** section in the left sidebar
+  </Step>
+
+  <Step title="Set Minimum Price">
+    Enter your minimum price in the **Min** input field
+  </Step>
+
+  <Step title="Set Maximum Price">
+    Enter your maximum price in the **Max** input field (default: 10000€)
+  </Step>
+
+  <Step title="View Filtered Results">
+    Products automatically update to show only items within your price range
+  </Step>
+</Steps>
+
+<Note>
+Filters work together - you can combine category and price filters to narrow your search further.
+</Note>
+
+### Clear All Filters
+
+If no products match your criteria:
+
+1. A message appears: **"No se encontraron productos que coincidan con tu búsqueda"**
+2. Click **"Limpiar filtros"** to reset all filters
+3. This clears category selection, price range, and search query
+
+## Viewing Product Details
+
+Click on any product card to view comprehensive product information:
+
+<Steps>
+  <Step title="Click Product Card">
+    Select any product from the catalog or featured section
+  </Step>
+
+  <Step title="View Product Information">
+    The detail page displays:
+    - Large product image
+    - Product name and category
+    - Current price with currency
+    - Full product description
+    - SKU (Stock Keeping Unit)
+    - Dimensions (height × width × depth in cm)
+    - Stock availability (number of units)
+  </Step>
+
+  <Step title="Check Stock Status">
+    Product availability is clearly indicated:
+    - **"X unidades"** - Available stock count
+    - **"Agotado"** - Out of stock (shown in red)
+  </Step>
+</Steps>
+
+### Product Detail Components
+
+#### Product Metadata
+
+Each product page shows structured information:
+
+- **SKU**: Unique product identifier
+- **Dimensiones**: Physical dimensions for furniture sizing
+- **Stock**: Real-time inventory count
+
+#### Product Images
+
+High-quality product images are displayed prominently. If no image is available, a placeholder is shown.
+
+#### Pricing Information
+
+Prices are displayed with:
+- Large, clear price amount
+- Currency symbol (€ for euros)
+- Formatted with two decimal places
+
+<Warning>
+You must be logged in to add products to your cart. Guest users will see a prompt to **"Iniciar Sesión para Comprar"**.
+</Warning>
+
+## Navigation Tips
+
+### Homepage Features
+
+- **Hero Section**: Showcases the 2025 collection with a call-to-action button
+- **Collection Section**: Displays 6 featured products
+- **About Section**: Company information with 15+ years of experience
+- **Store Location**: Interactive map showing the flagship store in Madrid
+
+### Catalog Navigation
+
+- Use the **breadcrumb trail** to navigate back to previous pages
+- The product count updates dynamically as you filter
+- All product cards are clickable for quick access to details
+
+## Best Practices
+
+<Card title="Optimize Your Search" icon="magnifying-glass">
+  Start with broad searches and use filters to narrow results. Combine category and price filters for precise matching.
+</Card>
+
+<Card title="Check Stock Before Adding" icon="box">
+  Always verify stock availability on the product detail page before planning your purchase.
+</Card>
+
+<Card title="Review Full Details" icon="list">
+  View the product detail page to see dimensions, descriptions, and specifications before adding to cart.
+</Card>
+
+## Related Guides
+
+- [Cart and Checkout](/user-guides/cart-checkout) - Learn how to purchase products
+- [Order Management](/user-guides/order-management) - Track your orders
+- [Admin Panel](/user-guides/admin-panel) - Admin product management features

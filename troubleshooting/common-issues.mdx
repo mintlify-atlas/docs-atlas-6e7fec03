@@ -1,0 +1,405 @@
+---
+title: 'Common Issues'
+description: 'Solutions to common problems in Iquea Commerce'
+icon: 'wrench'
+---
+
+This guide covers the most frequently encountered issues during development and their solutions.
+
+## Port Conflicts
+
+<Accordion title="Port 8080 already in use (Backend)">
+
+**Error Message:**
+```
+Web server failed to start. Port 8080 was already in use.
+```
+
+**Solution:**
+
+1. Find the process using port 8080:
+```bash
+lsof -i :8080
+# or on Windows
+netstat -ano | findstr :8080
+```
+
+2. Kill the process:
+```bash
+kill -9 <PID>
+# or on Windows
+taskkill /PID <PID> /F
+```
+
+3. Or change the backend port in `application.properties`:
+```properties
+server.port=8081
+```
+
+<Note>
+If you change the backend port, update the frontend API calls accordingly.
+</Note>
+
+</Accordion>
+
+<Accordion title="Port 5173 already in use (Frontend)">
+
+**Error Message:**
+```
+Port 5173 is in use, trying another one...
+```
+
+**Solution:**
+
+1. Find and kill the process:
+```bash
+lsof -i :5173
+kill -9 <PID>
+```
+
+2. Or let Vite use a different port automatically (it will suggest 5174, 5175, etc.)
+
+3. Or specify a custom port in `vite.config.ts`:
+```typescript
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000
+  }
+})
+```
+
+<Warning>
+If you change the frontend port, update the CORS configuration in `SecurityConfig.java` to include the new origin.
+</Warning>
+
+</Accordion>
+
+<Accordion title="Port 3306 already in use (MySQL)">
+
+**Error Message:**
+```
+Can't connect to MySQL server on 'localhost:3306'
+```
+
+**Solution:**
+
+1. Check if MySQL is running:
+```bash
+sudo systemctl status mysql
+# or on macOS
+mysql.server status
+```
+
+2. If another MySQL instance is running on 3306, either:
+   - Stop that instance
+   - Or change the database port in `application.properties`:
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3307/apiIquea?createDatabaseIfNotExist=true
+```
+
+3. Restart your MySQL server:
+```bash
+sudo systemctl restart mysql
+# or on macOS
+mysql.server restart
+```
+
+</Accordion>
+
+## Dependency Issues
+
+<Accordion title="npm install fails or node_modules issues">
+
+**Common Errors:**
+```
+npm ERR! code ENOENT
+npm ERR! syscall open
+```
+
+**Solutions:**
+
+1. Clear npm cache:
+```bash
+cd Iquea_front
+npm cache clean --force
+```
+
+2. Delete node_modules and package-lock.json:
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+3. If using a different Node version, use nvm:
+```bash
+nvm install 18
+nvm use 18
+npm install
+```
+
+4. Check for permission issues:
+```bash
+sudo chown -R $USER:$USER node_modules
+```
+
+<Note>
+The project uses Vite 7.3.1 and React 19.2.0. Ensure you have Node.js 18+ installed.
+</Note>
+
+</Accordion>
+
+<Accordion title="Maven build failures">
+
+**Error Message:**
+```
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin
+```
+
+**Solutions:**
+
+1. Clean and rebuild:
+```bash
+cd Iqüea_back
+mvn clean install
+```
+
+2. Check Java version (project requires Java 21):
+```bash
+java -version
+```
+
+3. If wrong version, install Java 21:
+```bash
+# Using SDKMAN
+sdk install java 21.0.1-open
+sdk use java 21.0.1-open
+```
+
+4. Clear Maven cache:
+```bash
+rm -rf ~/.m2/repository
+mvn clean install
+```
+
+5. Skip tests if they're failing:
+```bash
+mvn clean install -DskipTests
+```
+
+<Warning>
+The project uses MapStruct 1.6.0 and Lombok 1.18.38. Ensure your IDE has annotation processing enabled.
+</Warning>
+
+</Accordion>
+
+## Authentication Issues
+
+<Accordion title="JWT token expiration errors">
+
+**Error in Browser Console:**
+```
+401 Unauthorized
+JWT token has expired
+```
+
+**Explanation:**
+
+Tokens expire after 24 hours (configured in `JwtUtil.java:17`).
+
+**Solutions:**
+
+1. Log out and log back in to get a new token
+
+2. For development, increase token expiration in `JwtUtil.java`:
+```java
+private static final long EXPIRATION_MS = 86400000L; // 24 hours
+// Change to 7 days for development:
+private static final long EXPIRATION_MS = 604800000L; // 7 days
+```
+
+3. Implement token refresh mechanism in your frontend
+
+4. Check token in browser DevTools:
+```javascript
+localStorage.getItem('token')
+```
+
+<Note>
+Tokens are stored in localStorage. Clear storage if you encounter persistent issues:
+```javascript
+localStorage.clear()
+```
+</Note>
+
+</Accordion>
+
+<Accordion title="Invalid JWT token errors">
+
+**Error Message:**
+```
+JWT signature does not match
+Malformed JWT token
+```
+
+**Solutions:**
+
+1. Clear localStorage in browser:
+```javascript
+localStorage.clear()
+location.reload()
+```
+
+2. Verify the token format:
+   - Should have 3 parts separated by dots: `header.payload.signature`
+
+3. Check if the secret key matches between environments:
+   - Located in `JwtUtil.java:16`
+
+4. Ensure token is sent with correct header:
+```javascript
+headers: {
+  'Authorization': `Bearer ${token}`
+}
+```
+
+</Accordion>
+
+## Frontend-Backend Connection
+
+<Accordion title="Cannot connect to backend API">
+
+**Error in Browser Console:**
+```
+GET http://localhost:8080/api/productos net::ERR_CONNECTION_REFUSED
+```
+
+**Solutions:**
+
+1. Verify backend is running:
+```bash
+curl http://localhost:8080/api/productos
+```
+
+2. Check backend port in `application.properties:4`:
+```properties
+server.port=8080
+```
+
+3. Verify API base URL in frontend code
+
+4. Check firewall settings:
+```bash
+# Linux
+sudo ufw allow 8080
+
+# Windows
+# Add port 8080 to Windows Firewall exceptions
+```
+
+5. Ensure MySQL is running (backend won't start without it):
+```bash
+sudo systemctl start mysql
+```
+
+</Accordion>
+
+<Accordion title="API returns 404 for existing endpoints">
+
+**Error:**
+```
+404 Not Found
+```
+
+**Solutions:**
+
+1. Check the API endpoint path:
+   - Authentication: `/api/auth/**`
+   - Products: `/api/productos/**`
+   - Categories: `/api/categorias/**`
+
+2. Verify controller mapping in backend code
+
+3. Check for typos (especially with special characters like ü in "Iqüea")
+
+4. Look at backend console logs for actual registered endpoints:
+```
+Mapped "{[/api/productos]}"
+```
+
+</Accordion>
+
+## Development Server Issues
+
+<Accordion title="Hot reload not working (Frontend)">
+
+**Problem:**
+Changes to React components don't reflect in the browser.
+
+**Solutions:**
+
+1. Check if Fast Refresh is enabled in `vite.config.ts`:
+```typescript
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()]
+})
+```
+
+2. Restart the dev server:
+```bash
+ctrl+c
+npm run dev
+```
+
+3. Clear browser cache:
+   - Chrome/Edge: Ctrl+Shift+Delete
+   - Or hard reload: Ctrl+Shift+R
+
+4. Check for TypeScript errors:
+```bash
+npm run lint
+```
+
+5. Ensure file is saved and within src directory
+
+</Accordion>
+
+<Accordion title="Backend changes not reflecting (Spring Boot DevTools)">
+
+**Problem:**
+Code changes require manual restart.
+
+**Solutions:**
+
+1. Verify Spring Boot DevTools is in `pom.xml` (line 79-82):
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-devtools</artifactId>
+  <scope>runtime</scope>
+  <optional>true</optional>
+</dependency>
+```
+
+2. Enable "Build project automatically" in your IDE:
+   - IntelliJ: Settings → Build → Compiler → Build project automatically
+   - Eclipse: Project → Build Automatically
+
+3. For structural changes (new classes, dependencies), restart manually:
+```bash
+mvn spring-boot:run
+```
+
+<Note>
+DevTools only hot-reloads code changes. Configuration changes in `application.properties` require a full restart.
+</Note>
+
+</Accordion>
+
+## Additional Resources
+
+- [Database Errors](/troubleshooting/database-errors) - Database connection and query issues
+- [CORS Issues](/troubleshooting/cors-issues) - Cross-origin request problems
+- [GitHub Issues](https://github.com/your-org/iquea-commerce/issues) - Report bugs

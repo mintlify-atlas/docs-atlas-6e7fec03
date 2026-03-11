@@ -1,0 +1,556 @@
+---
+title: Security Implementation
+description: Complete guide to JWT authentication, authorization, and security configuration
+---
+
+# Security Implementation
+
+Iquea Commerce implements a stateless JWT-based authentication system with role-based access control (RBAC) using Spring Security.
+
+## Security Architecture
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant JwtFilter
+    participant JwtUtil
+    participant SecurityContext
+    participant Controller
+    participant Service
+
+    Client->>JwtFilter: HTTP Request + Bearer Token
+    JwtFilter->>JwtUtil: Validate Token
+    alt Token Valid
+        JwtUtil-->>JwtFilter: Email + Role
+        JwtFilter->>SecurityContext: Set Authentication
+        JwtFilter->>Controller: Forward Request
+        Controller->>Service: Process Request
+        Service-->>Controller: Response
+        Controller-->>Client: HTTP 200 + Data
+    else Token Invalid
+        JwtUtil-->>JwtFilter: Invalid
+        JwtFilter-->>Client: HTTP 403 Forbidden
+    end
+```
+
+## Security Configuration
+
+### SecurityConfig.java
+
+Configures Spring Security with JWT authentication and endpoint authorization.
+
+```java
+package com.edu.mcs.Iquea.security;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    private final JwtFilter jwtFilter;
+
+    public SecurityConfig(JwtFilter jwtFilter) {
+        this.jwtFilter = jwtFilter;
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            // Disable CSRF for stateless JWT
+            .csrf(csrf -> csrf.disable())
+            
+            // Stateless session management
+            .sessionManagement(s -> 
+                s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+            
+            // Authorization rules
+            .authorizeHttpRequests(auth -> auth
+                // Public routes
+                .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
+                .requestMatchers(HttpMethod.GET,  "/api/productos/**").permitAll()
+                .requestMatchers(HttpMethod.GET,  "/api/categorias/**").permitAll()
+                
+                // ADMIN-only routes
+                .requestMatchers(HttpMethod.POST,   "/api/productos/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,    "/api/productos/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/productos/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST,   "/api/categorias/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,    "/api/categorias/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/categorias/**").hasRole("ADMIN")
+                
+                // Everything else requires authentication
+                .anyRequest().authenticated()
+            )
+            
+            // Add JWT filter before Spring Security's authentication filter
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(
+            Arrays.asList("http://localhost:5173", "http://127.0.0.1:5173")
+        );
+        configuration.setAllowedMethods(
+            Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
+        );
+        configuration.setAllowedHeaders(
+            Arrays.asList("Authorization", "Content-Type", "X-Requested-With", 
+                         "Accept", "Origin", "Access-Control-Request-Method", 
+                         "Access-Control-Request-Headers")
+        );
+        configuration.setExposedHeaders(Arrays.asList("Authorization"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+}
+```
+
+**Key configurations:**
+- **CSRF disabled** - Not needed for stateless JWT authentication
+- **Stateless sessions** - No server-side session storage
+- **Role-based access** - ADMIN vs CLIENTE permissions
+- **CORS enabled** - Allows frontend access from localhost:5173
+
+## JWT Implementation
+
+### JwtUtil.java
+
+Utility class for generating and validating JWT tokens.
+
+```java
+package com.edu.mcs.Iquea.security;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.stereotype.Component;
+
+import javax.crypto.SecretKey;
+import java.util.Date;
+
+@Component
+public class JwtUtil {
+
+    private static final String SECRET = 
+        "iquea-super-secret-key-2024-must-be-long-enough-32chars";
+    private static final long EXPIRATION_MS = 86400000L; // 24 hours
+
+    private final SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes());
+
+    /**
+     * Generate JWT token with email and role claims
+     */
+    public String generarToken(String email, String rol) {
+        return Jwts.builder()
+                .subject(email)
+                .claim("rol", rol)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_MS))
+                .signWith(key)
+                .compact();
+    }
+
+    /**
+     * Extract email from token
+     */
+    public String extraerEmail(String token) {
+        return parsear(token).getPayload().getSubject();
+    }
+
+    /**
+     * Extract role from token
+     */
+    public String extraerRol(String token) {
+        return parsear(token).getPayload().get("rol", String.class);
+    }
+
+    /**
+     * Validate token signature and expiration
+     */
+    public boolean esValido(String token) {
+        try {
+            parsear(token);
+            return true;
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    private Jws<Claims> parsear(String token) {
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token);
+    }
+}
+```
+
+**Token structure:**
+```json
+{
+  "sub": "usuario@example.com",
+  "rol": "ADMIN",
+  "iat": 1710000000,
+  "exp": 1710086400
+}
+```
+
+**Key features:**
+- **HMAC-SHA256** signature algorithm
+- **24-hour expiration** - Tokens expire after 1 day
+- **Custom claims** - Stores user role in token
+- **Automatic validation** - Checks signature and expiration
+
+<Warning>
+In production, the secret key should be stored in environment variables or a secrets manager, not hardcoded.
+</Warning>
+
+### JwtFilter.java
+
+Intercepts requests to validate JWT tokens and set authentication context.
+
+```java
+package com.edu.mcs.Iquea.security;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.List;
+
+@Component
+public class JwtFilter extends OncePerRequestFilter {
+
+    private final JwtUtil jwtUtil;
+
+    public JwtFilter(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
+            throws ServletException, IOException {
+
+        // Extract Authorization header
+        String header = request.getHeader("Authorization");
+
+        if (header != null && header.startsWith("Bearer ")) {
+            String token = header.substring(7); // Remove "Bearer " prefix
+
+            if (jwtUtil.esValido(token)) {
+                String email = jwtUtil.extraerEmail(token);
+                String rol   = jwtUtil.extraerRol(token);
+
+                // Create authentication object
+                var auth = new UsernamePasswordAuthenticationToken(
+                        email,
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_" + rol))
+                );
+                
+                // Set authentication in Spring Security context
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            }
+        }
+
+        // Continue filter chain
+        filterChain.doFilter(request, response);
+    }
+}
+```
+
+**Filter workflow:**
+1. Extract `Authorization` header from request
+2. Remove `Bearer ` prefix to get token
+3. Validate token signature and expiration
+4. Extract email and role from token claims
+5. Create Spring Security authentication object
+6. Add `ROLE_` prefix (Spring Security convention)
+7. Set authentication in security context
+8. Continue with request processing
+
+<Note>
+The `ROLE_` prefix is automatically added by the filter, so `hasRole("ADMIN")` checks for `ROLE_ADMIN` authority.
+</Note>
+
+## Authentication Flow
+
+### AuthController.java
+
+Handles user registration and login.
+
+```java
+package com.edu.mcs.Iquea.controllers;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*;
+
+import com.edu.mcs.Iquea.models.Usuario;
+import com.edu.mcs.Iquea.models.dto.detalle.LoginDTO;
+import com.edu.mcs.Iquea.models.dto.detalle.TokenDTO;
+import com.edu.mcs.Iquea.models.dto.detalle.UsuarioDetalleDTO;
+import com.edu.mcs.Iquea.repositories.UsuarioRepository;
+import com.edu.mcs.Iquea.security.JwtUtil;
+import com.edu.mcs.Iquea.services.IUsuarioService;
+
+@RestController
+@RequestMapping("/api/auth")
+public class AuthController {
+
+    private final IUsuarioService usuarioService;
+    private final UsuarioRepository usuarioRepository;
+    private final JwtUtil jwtUtil;
+    private final PasswordEncoder passwordEncoder;
+
+    public AuthController(IUsuarioService usuarioService, 
+                         UsuarioRepository usuarioRepository,
+                         JwtUtil jwtUtil, 
+                         PasswordEncoder passwordEncoder) {
+        this.usuarioService = usuarioService;
+        this.usuarioRepository = usuarioRepository;
+        this.jwtUtil = jwtUtil;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    /**
+     * POST /api/auth/registro
+     * Register new user and return JWT token
+     */
+    @PostMapping("/registro")
+    public ResponseEntity<TokenDTO> registro(@RequestBody UsuarioDetalleDTO dto) {
+        Usuario creado = usuarioService.crearUsuario(dto);
+        String token = jwtUtil.generarToken(
+                creado.getEmail().getValue(),
+                creado.getRol().name()
+        );
+        return ResponseEntity.ok(new TokenDTO(token));
+    }
+
+    /**
+     * POST /api/auth/login
+     * Authenticate user and return JWT token
+     */
+    @PostMapping("/login")
+    public ResponseEntity<TokenDTO> login(@RequestBody LoginDTO dto) {
+        Usuario usuario = usuarioRepository.findByEmailValue(dto.getEmail())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        if (!passwordEncoder.matches(dto.getPassword(), usuario.getPassword())) {
+            throw new IllegalArgumentException("Contraseña incorrecta");
+        }
+
+        String token = jwtUtil.generarToken(
+                usuario.getEmail().getValue(),
+                usuario.getRol().name()
+        );
+        return ResponseEntity.ok(new TokenDTO(token));
+    }
+}
+```
+
+### Registration Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant AuthController
+    participant UsuarioService
+    participant PasswordEncoder
+    participant JwtUtil
+    participant Database
+
+    Client->>AuthController: POST /api/auth/registro
+    AuthController->>PasswordEncoder: Hash password
+    PasswordEncoder-->>AuthController: Hashed password
+    AuthController->>UsuarioService: Create user
+    UsuarioService->>Database: Save user
+    Database-->>UsuarioService: User saved
+    UsuarioService-->>AuthController: Usuario entity
+    AuthController->>JwtUtil: Generate token
+    JwtUtil-->>AuthController: JWT token
+    AuthController-->>Client: 200 OK + Token
+```
+
+### Login Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant AuthController
+    participant UsuarioRepository
+    participant PasswordEncoder
+    participant JwtUtil
+
+    Client->>AuthController: POST /api/auth/login
+    AuthController->>UsuarioRepository: Find by email
+    UsuarioRepository-->>AuthController: Usuario or empty
+    alt User exists
+        AuthController->>PasswordEncoder: Verify password
+        alt Password correct
+            AuthController->>JwtUtil: Generate token
+            JwtUtil-->>AuthController: JWT token
+            AuthController-->>Client: 200 OK + Token
+        else Password incorrect
+            AuthController-->>Client: 400 Bad Request
+        end
+    else User not found
+        AuthController-->>Client: 404 Not Found
+    end
+```
+
+## Role-Based Access Control
+
+### User Roles
+
+```java
+public enum RolUsuario {
+    ADMIN,    // Full access to products, categories, users
+    CLIENTE   // Can browse products and place orders
+}
+```
+
+### Endpoint Authorization Matrix
+
+| Endpoint | Method | Public | CLIENTE | ADMIN |
+|----------|--------|--------|---------|-------|
+| `/api/auth/registro` | POST | ✅ | ✅ | ✅ |
+| `/api/auth/login` | POST | ✅ | ✅ | ✅ |
+| `/api/productos` | GET | ✅ | ✅ | ✅ |
+| `/api/productos` | POST | ❌ | ❌ | ✅ |
+| `/api/productos/{id}` | PUT | ❌ | ❌ | ✅ |
+| `/api/productos/{id}` | DELETE | ❌ | ❌ | ✅ |
+| `/api/categorias` | GET | ✅ | ✅ | ✅ |
+| `/api/categorias` | POST | ❌ | ❌ | ✅ |
+| `/api/pedidos` | GET | ❌ | ✅ | ✅ |
+| `/api/pedidos` | POST | ❌ | ✅ | ✅ |
+| `/api/usuarios` | GET | ❌ | ❌ | ✅ |
+
+### Making Authenticated Requests
+
+**Registration:**
+```bash
+curl -X POST http://localhost:8080/api/auth/registro \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "secret123",
+    "username": "johndoe",
+    "nombre": "John",
+    "apellidos": "Doe",
+    "fecha_nacimiento": "1990-01-01",
+    "direccion_envio": "123 Main St"
+  }'
+```
+
+**Response:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Using the token:**
+```bash
+curl -X GET http://localhost:8080/api/pedidos \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+## Password Encryption
+
+**BCrypt configuration:**
+```java
+@Bean
+public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+}
+```
+
+**Hashing passwords:**
+```java
+String plainPassword = "secret123";
+String hashedPassword = passwordEncoder.encode(plainPassword);
+// Result: $2a$10$N9qo8uLOickgx2ZMRZoMye...
+```
+
+**Verifying passwords:**
+```java
+boolean matches = passwordEncoder.matches(
+    dto.getPassword(),      // Plain text from request
+    usuario.getPassword()   // Hashed from database
+);
+```
+
+<Note>
+BCrypt automatically generates salts and is resistant to rainbow table attacks.
+</Note>
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Stateless Authentication" icon="server">
+    JWT tokens contain all necessary information, no server-side session storage needed
+  </Card>
+  <Card title="Password Hashing" icon="lock">
+    BCrypt with automatic salting protects user passwords
+  </Card>
+  <Card title="Token Expiration" icon="clock">
+    24-hour expiration limits exposure from stolen tokens
+  </Card>
+  <Card title="CORS Configuration" icon="shield">
+    Restricts API access to authorized frontend origins
+  </Card>
+</CardGroup>
+
+## Security Checklist
+
+- ✅ Passwords hashed with BCrypt
+- ✅ JWT tokens expire after 24 hours
+- ✅ CSRF protection disabled (stateless JWT)
+- ✅ Role-based access control (ADMIN/CLIENTE)
+- ✅ Public endpoints documented
+- ✅ CORS configured for frontend
+- ⚠️ Move secret key to environment variables
+- ⚠️ Add refresh token mechanism
+- ⚠️ Implement token blacklist for logout
+- ⚠️ Add rate limiting for login attempts

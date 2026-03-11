@@ -1,0 +1,802 @@
+---
+title: Testing Guide
+description: Learn how to write and run tests for Iquea Commerce backend and frontend applications
+---
+
+## Overview
+
+Testing is crucial for maintaining code quality and preventing regressions. This guide covers testing strategies for both the Java Spring Boot backend and React TypeScript frontend.
+
+## Backend Testing (Spring Boot)
+
+### Testing Framework
+
+The backend uses:
+- **JUnit 5** - Testing framework
+- **Spring Boot Test** - Spring testing utilities
+- **Mockito** - Mocking framework
+- **AssertJ** - Fluent assertions
+
+### Project Structure
+
+```
+Iqüea_back/
+├── src/
+│   ├── main/java/com/edu/mcs/Iquea/
+│   │   ├── controllers/
+│   │   ├── services/
+│   │   ├── repositories/
+│   │   └── models/
+│   └── test/java/com/edu/mcs/Iquea/
+│       ├── IqueaApplicationTests.java
+│       ├── controllers/
+│       ├── services/
+│       └── repositories/
+```
+
+### Running Tests
+
+<Steps>
+  <Step title="Run All Tests">
+    Execute all tests using Maven Wrapper:
+
+    ```bash
+    cd Iqüea_back
+    ./mvnw test
+    ```
+
+    On Windows:
+    ```bash
+    .\mvnw.cmd test
+    ```
+  </Step>
+
+  <Step title="Run Specific Test Class">
+    Run a single test class:
+
+    ```bash
+    ./mvnw test -Dtest=ProductoServiceTests
+    ```
+  </Step>
+
+  <Step title="Run with Coverage">
+    Generate test coverage report:
+
+    ```bash
+    ./mvnw clean test jacoco:report
+    ```
+
+    View report at `target/site/jacoco/index.html`
+  </Step>
+</Steps>
+
+### Application Context Test
+
+Basic smoke test to verify Spring context loads:
+
+```java
+package com.edu.mcs.Iquea;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class IqueaApplicationTests {
+
+    @Test
+    void contextLoads() {
+        // Verifies that the Spring application context loads successfully
+    }
+}
+```
+
+### Unit Testing Services
+
+Test service layer with mocked dependencies:
+
+```java
+package com.edu.mcs.Iquea.services;
+
+import com.edu.mcs.Iquea.mappers.ProductoMapper;
+import com.edu.mcs.Iquea.models.Producto;
+import com.edu.mcs.Iquea.models.dto.detalle.ProductoDetalleDTO;
+import com.edu.mcs.Iquea.repositories.ProductoRepository;
+import com.edu.mcs.Iquea.services.implementaciones.ProductoServiceImpl;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class ProductoServiceTests {
+
+    @Mock
+    private ProductoRepository productoRepository;
+
+    @Mock
+    private ProductoMapper productoMapper;
+
+    @InjectMocks
+    private ProductoServiceImpl productoService;
+
+    private Producto producto;
+    private ProductoDetalleDTO productoDTO;
+
+    @BeforeEach
+    void setUp() {
+        producto = new Producto();
+        producto.setSku("CHAIR-001");
+        producto.setNombre("Silla Moderna");
+
+        productoDTO = new ProductoDetalleDTO();
+        productoDTO.setSku("CHAIR-001");
+        productoDTO.setNombre("Silla Moderna");
+    }
+
+    @Test
+    void crearProducto_ConSkuUnico_DeberiaCrearProducto() {
+        // Arrange
+        when(productoRepository.existsBySku(anyString())).thenReturn(false);
+        when(productoMapper.toEntity(any(ProductoDetalleDTO.class))).thenReturn(producto);
+        when(productoRepository.save(any(Producto.class))).thenReturn(producto);
+
+        // Act
+        Producto resultado = productoService.crearProducto(productoDTO);
+
+        // Assert
+        assertThat(resultado).isNotNull();
+        assertThat(resultado.getSku()).isEqualTo("CHAIR-001");
+        verify(productoRepository).save(producto);
+    }
+
+    @Test
+    void crearProducto_ConSkuDuplicado_DeberiaLanzarExcepcion() {
+        // Arrange
+        when(productoRepository.existsBySku(anyString())).thenReturn(true);
+
+        // Act & Assert
+        assertThatThrownBy(() -> productoService.crearProducto(productoDTO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Ya existe un producto con el SKU");
+
+        verify(productoRepository, never()).save(any());
+    }
+
+    @Test
+    void obtenerProductoPorId_ConIdExistente_DeberiaRetornarProducto() {
+        // Arrange
+        Long id = 1L;
+        when(productoRepository.findById(id)).thenReturn(Optional.of(producto));
+
+        // Act
+        Optional<Producto> resultado = productoService.obtenerProductoPorId(id);
+
+        // Assert
+        assertThat(resultado).isPresent();
+        assertThat(resultado.get().getSku()).isEqualTo("CHAIR-001");
+    }
+
+    @Test
+    void obtenerProductoPorId_ConIdNoExistente_DeberiaRetornarVacio() {
+        // Arrange
+        Long id = 999L;
+        when(productoRepository.findById(id)).thenReturn(Optional.empty());
+
+        // Act
+        Optional<Producto> resultado = productoService.obtenerProductoPorId(id);
+
+        // Assert
+        assertThat(resultado).isEmpty();
+    }
+
+    @Test
+    void actualizarProducto_ConSkuExistente_DeberiaActualizarProducto() {
+        // Arrange
+        String sku = "CHAIR-001";
+        when(productoRepository.findBySku(sku)).thenReturn(Optional.of(producto));
+        when(productoRepository.save(any(Producto.class))).thenReturn(producto);
+
+        // Act
+        Producto resultado = productoService.actualizarProducto(sku, productoDTO);
+
+        // Assert
+        assertThat(resultado).isNotNull();
+        verify(productoMapper).updatefromEntity(productoDTO, producto);
+        verify(productoRepository).save(producto);
+    }
+
+    @Test
+    void borrarProducto_ConIdExistente_DeberiaEliminarProducto() {
+        // Arrange
+        Long id = 1L;
+        when(productoRepository.existsById(id)).thenReturn(true);
+
+        // Act
+        productoService.borrarProducto(id);
+
+        // Assert
+        verify(productoRepository).deleteById(id);
+    }
+
+    @Test
+    void borrarProducto_ConIdNoExistente_DeberiaLanzarExcepcion() {
+        // Arrange
+        Long id = 999L;
+        when(productoRepository.existsById(id)).thenReturn(false);
+
+        // Act & Assert
+        assertThatThrownBy(() -> productoService.borrarProducto(id))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("no existe");
+
+        verify(productoRepository, never()).deleteById(any());
+    }
+}
+```
+
+<Tip>
+  **Testing Best Practices:**
+  - Use descriptive test names: `methodName_condition_expectedResult`
+  - Follow Arrange-Act-Assert pattern
+  - Test both success and failure scenarios
+  - Use `@BeforeEach` for common setup
+  - Verify mock interactions with `verify()`
+</Tip>
+
+### Integration Testing Controllers
+
+Test controllers with MockMvc:
+
+```java
+package com.edu.mcs.Iquea.controllers;
+
+import com.edu.mcs.Iquea.models.Producto;
+import com.edu.mcs.Iquea.models.dto.detalle.ProductoDetalleDTO;
+import com.edu.mcs.Iquea.services.implementaciones.ProductoServiceImpl;
+import com.edu.mcs.Iquea.mappers.ProductoMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(ProductoController.class)
+class ProductoControllerTests {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockBean
+    private ProductoServiceImpl productoService;
+
+    @MockBean
+    private ProductoMapper productoMapper;
+
+    @Test
+    void listarTodos_DeberiaRetornarListaDeProductos() throws Exception {
+        // Arrange
+        Producto producto1 = new Producto();
+        producto1.setNombre("Silla");
+        Producto producto2 = new Producto();
+        producto2.setNombre("Mesa");
+
+        List<Producto> productos = Arrays.asList(producto1, producto2);
+        List<ProductoDetalleDTO> productosDTO = Arrays.asList(new ProductoDetalleDTO(), new ProductoDetalleDTO());
+
+        when(productoService.obtenertodoslosproductos()).thenReturn(productos);
+        when(productoMapper.toDTOlist(productos)).thenReturn(productosDTO);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/productos"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    void obtenerPorId_ConIdExistente_DeberiaRetornarProducto() throws Exception {
+        // Arrange
+        Long id = 1L;
+        Producto producto = new Producto();
+        producto.setNombre("Silla");
+        ProductoDetalleDTO productoDTO = new ProductoDetalleDTO();
+
+        when(productoService.obtenerProductoPorId(id)).thenReturn(Optional.of(producto));
+        when(productoMapper.toDTO(producto)).thenReturn(productoDTO);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/productos/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void obtenerPorId_ConIdNoExistente_DeberiaRetornar404() throws Exception {
+        // Arrange
+        Long id = 999L;
+        when(productoService.obtenerProductoPorId(id)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        mockMvc.perform(get("/api/productos/{id}", id))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void crear_ConDatosValidos_DeberiaRetornar201() throws Exception {
+        // Arrange
+        ProductoDetalleDTO productoDTO = new ProductoDetalleDTO();
+        productoDTO.setSku("CHAIR-001");
+        productoDTO.setNombre("Silla Moderna");
+
+        Producto producto = new Producto();
+        when(productoService.crearProducto(any(ProductoDetalleDTO.class))).thenReturn(producto);
+        when(productoMapper.toDTO(producto)).thenReturn(productoDTO);
+
+        // Act & Assert
+        mockMvc.perform(post("/api/productos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(productoDTO)))
+                .andExpect(status().isCreated())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void eliminar_ConIdExistente_DeberiaRetornar204() throws Exception {
+        // Arrange
+        Long id = 1L;
+
+        // Act & Assert
+        mockMvc.perform(delete("/api/productos/{id}", id))
+                .andExpect(status().isNoContent());
+    }
+}
+```
+
+<Note>
+  `@WebMvcTest` only loads the web layer, making tests faster. Use `@SpringBootTest` for full integration tests.
+</Note>
+
+### Repository Testing
+
+Test custom repository queries:
+
+```java
+package com.edu.mcs.Iquea.repositories;
+
+import com.edu.mcs.Iquea.models.Producto;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@DataJpaTest
+class ProductoRepositoryTests {
+
+    @Autowired
+    private TestEntityManager entityManager;
+
+    @Autowired
+    private ProductoRepository productoRepository;
+
+    @Test
+    void findBySku_ConSkuExistente_DeberiaRetornarProducto() {
+        // Arrange
+        Producto producto = new Producto();
+        producto.setSku("CHAIR-001");
+        producto.setNombre("Silla Moderna");
+        entityManager.persistAndFlush(producto);
+
+        // Act
+        Optional<Producto> resultado = productoRepository.findBySku("CHAIR-001");
+
+        // Assert
+        assertThat(resultado).isPresent();
+        assertThat(resultado.get().getNombre()).isEqualTo("Silla Moderna");
+    }
+
+    @Test
+    void existsBySku_ConSkuExistente_DeberiaRetornarTrue() {
+        // Arrange
+        Producto producto = new Producto();
+        producto.setSku("CHAIR-001");
+        entityManager.persistAndFlush(producto);
+
+        // Act
+        boolean existe = productoRepository.existsBySku("CHAIR-001");
+
+        // Assert
+        assertThat(existe).isTrue();
+    }
+
+    @Test
+    void findByEs_destacado_DeberiaRetornarSoloDestacados() {
+        // Arrange
+        Producto destacado = new Producto();
+        destacado.setSku("CHAIR-001");
+        destacado.setEs_destacado(true);
+        entityManager.persist(destacado);
+
+        Producto normal = new Producto();
+        normal.setSku("CHAIR-002");
+        normal.setEs_destacado(false);
+        entityManager.persist(normal);
+        entityManager.flush();
+
+        // Act
+        List<Producto> destacados = productoRepository.findByEs_destacado(true);
+
+        // Assert
+        assertThat(destacados).hasSize(1);
+        assertThat(destacados.get(0).isEs_destacado()).isTrue();
+    }
+}
+```
+
+## Frontend Testing (React + TypeScript)
+
+### Testing Framework
+
+The frontend can use:
+- **Vitest** - Fast unit test framework (Vite-native)
+- **React Testing Library** - Test React components
+- **Jest** - Alternative testing framework
+
+### Setting Up Tests
+
+<Steps>
+  <Step title="Install Testing Dependencies">
+    ```bash
+    cd Iquea_front
+    npm install -D vitest @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom
+    ```
+  </Step>
+
+  <Step title="Configure Vitest">
+    Update `vite.config.ts`:
+
+    ```typescript
+    import { defineConfig } from 'vite'
+    import react from '@vitejs/plugin-react'
+
+    export default defineConfig({
+      plugins: [react()],
+      test: {
+        globals: true,
+        environment: 'jsdom',
+        setupFiles: './src/test/setup.ts',
+      },
+    })
+    ```
+  </Step>
+
+  <Step title="Add Test Script">
+    Update `package.json`:
+
+    ```json
+    {
+      "scripts": {
+        "dev": "vite",
+        "build": "tsc -b && vite build",
+        "test": "vitest",
+        "test:ui": "vitest --ui",
+        "test:coverage": "vitest --coverage"
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+### Running Frontend Tests
+
+```bash
+# Run tests in watch mode
+npm test
+
+# Run tests once
+npm test -- --run
+
+# Run with UI
+npm run test:ui
+
+# Generate coverage report
+npm run test:coverage
+```
+
+### Component Testing
+
+Test React components:
+
+```typescript
+// src/components/ProductoCard.test.tsx
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+import ProductoCard from './ProductoCard';
+import type { Producto } from '../types';
+
+const mockProducto: Producto = {
+    producto_id: 1,
+    sku: 'CHAIR-001',
+    nombre: 'Silla Moderna',
+    descripcion: 'Una silla cómoda',
+    precioCantidad: 99.99,
+    precioMoneda: 'EUR',
+    dimensionesAlto: 100,
+    dimensionesAncho: 50,
+    dimensionesProfundo: 50,
+    es_destacado: true,
+    stock: 10,
+    imagen_url: 'https://example.com/silla.jpg',
+    categoria: {
+        categoria_id: 1,
+        nombre: 'Sillas',
+        slug: 'sillas',
+    },
+};
+
+const renderWithRouter = (component: React.ReactElement) => {
+    return render(<BrowserRouter>{component}</BrowserRouter>);
+};
+
+describe('ProductoCard', () => {
+    it('debería renderizar el nombre del producto', () => {
+        renderWithRouter(<ProductoCard producto={mockProducto} />);
+        expect(screen.getByText('Silla Moderna')).toBeInTheDocument();
+    });
+
+    it('debería mostrar el precio formateado', () => {
+        renderWithRouter(<ProductoCard producto={mockProducto} />);
+        expect(screen.getByText('99.99')).toBeInTheDocument();
+        expect(screen.getByText('EUR')).toBeInTheDocument();
+    });
+
+    it('debería mostrar badge de destacado', () => {
+        renderWithRouter(<ProductoCard producto={mockProducto} />);
+        expect(screen.getByText('Destacado')).toBeInTheDocument();
+    });
+
+    it('debería renderizar imagen con alt text correcto', () => {
+        renderWithRouter(<ProductoCard producto={mockProducto} />);
+        const img = screen.getByAltText('Silla Moderna');
+        expect(img).toHaveAttribute('src', 'https://example.com/silla.jpg');
+    });
+
+    it('debería mostrar categoría', () => {
+        renderWithRouter(<ProductoCard producto={mockProducto} />);
+        expect(screen.getByText('Sillas')).toBeInTheDocument();
+    });
+
+    it('debería mostrar badge de agotado cuando stock es 0', () => {
+        const productoAgotado = { ...mockProducto, stock: 0 };
+        renderWithRouter(<ProductoCard producto={productoAgotado} />);
+        expect(screen.getByText('Agotado')).toBeInTheDocument();
+    });
+});
+```
+
+### API Client Testing
+
+Test API functions with mocked fetch:
+
+```typescript
+// src/api/productos.test.ts
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fetchProductos, fetchProductoById } from './productos';
+import type { Producto } from '../types';
+
+global.fetch = vi.fn();
+
+const mockProducto: Producto = {
+    producto_id: 1,
+    sku: 'CHAIR-001',
+    nombre: 'Silla Moderna',
+    // ... other fields
+};
+
+describe('API Productos', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('fetchProductos debería retornar lista de productos', async () => {
+        const mockResponse = [mockProducto];
+        (fetch as any).mockResolvedValueOnce({
+            ok: true,
+            json: async () => mockResponse,
+        });
+
+        const result = await fetchProductos();
+
+        expect(fetch).toHaveBeenCalledWith(
+            'http://localhost:8080/api/productos',
+            expect.any(Object)
+        );
+        expect(result).toEqual(mockResponse);
+    });
+
+    it('fetchProductoById debería retornar producto por ID', async () => {
+        (fetch as any).mockResolvedValueOnce({
+            ok: true,
+            json: async () => mockProducto,
+        });
+
+        const result = await fetchProductoById(1);
+
+        expect(fetch).toHaveBeenCalledWith(
+            'http://localhost:8080/api/productos/1',
+            expect.any(Object)
+        );
+        expect(result).toEqual(mockProducto);
+    });
+
+    it('debería lanzar error cuando fetch falla', async () => {
+        (fetch as any).mockResolvedValueOnce({
+            ok: false,
+            status: 404,
+            json: async () => ({ message: 'Producto no encontrado' }),
+        });
+
+        await expect(fetchProductoById(999)).rejects.toThrow('Producto no encontrado');
+    });
+});
+```
+
+## Test Coverage Goals
+
+<Tip>
+  Aim for these coverage targets:
+  - **Service Layer**: 80%+ coverage
+  - **Controllers**: 70%+ coverage
+  - **Components**: 70%+ coverage
+  - **Utilities**: 90%+ coverage
+</Tip>
+
+## Continuous Integration
+
+Tests run automatically on:
+- Every push to feature branches
+- Pull request creation
+- Before merging to main
+
+### GitHub Actions Example
+
+```yaml
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+      - name: Run tests
+        run: |
+          cd Iqüea_back
+          ./mvnw test
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: |
+          cd Iquea_front
+          npm install
+      - name: Run tests
+        run: npm test -- --run
+```
+
+## Best Practices
+
+<Note>
+  **General Testing Guidelines:**
+  - Write tests before fixing bugs (TDD for bug fixes)
+  - Test edge cases and error conditions
+  - Keep tests independent and isolated
+  - Use meaningful test names
+  - Don't test implementation details
+  - Mock external dependencies
+  - Maintain fast test execution
+</Note>
+
+<Tip>
+  **What to Test:**
+  - Business logic in services
+  - API endpoint contracts
+  - Component rendering and interactions
+  - Error handling and validation
+  - Edge cases and boundary conditions
+</Tip>
+
+<Tip>
+  **What NOT to Test:**
+  - Third-party library internals
+  - Framework functionality
+  - Getters/setters without logic
+  - Generated code (MapStruct implementations)
+</Tip>
+
+## Troubleshooting
+
+### Backend Test Issues
+
+**Tests fail with database connection errors:**
+```bash
+# Use H2 in-memory database for tests
+# Add to src/test/resources/application.properties:
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+```
+
+**MapStruct mapper not found:**
+```bash
+# Rebuild project to regenerate mappers
+./mvnw clean compile
+```
+
+### Frontend Test Issues
+
+**Module resolution errors:**
+```typescript
+// Add to vite.config.ts
+resolve: {
+  alias: {
+    '@': '/src',
+  },
+}
+```
+
+**Async tests timing out:**
+```typescript
+// Increase timeout for slow tests
+it('slow test', async () => {
+  // ...
+}, { timeout: 10000 }); // 10 seconds
+```
+
+## Additional Resources
+
+- [JUnit 5 User Guide](https://junit.org/junit5/docs/current/user-guide/)
+- [Spring Boot Testing](https://spring.io/guides/gs/testing-web/)
+- [React Testing Library](https://testing-library.com/react)
+- [Vitest Documentation](https://vitest.dev/)

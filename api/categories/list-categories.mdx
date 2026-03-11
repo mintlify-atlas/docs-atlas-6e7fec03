@@ -1,0 +1,81 @@
+---
+title: "List Categories"
+api: "GET /api/categorias"
+description: "Retrieve a list of all product categories"
+---
+
+## Authentication
+
+This endpoint does not require authentication.
+
+## Response
+
+Returns an array of category objects.
+
+<ResponseField name="categories" type="array">
+  <Expandable title="Category Object">
+    <ResponseField name="categoria_id" type="long">
+      Unique identifier for the category
+    </ResponseField>
+    
+    <ResponseField name="nombre" type="string">
+      Category name
+    </ResponseField>
+    
+    <ResponseField name="slug" type="string">
+      URL-friendly category identifier
+    </ResponseField>
+    
+    <ResponseField name="productos" type="array">
+      List of products in this category
+      <Expandable title="Product Summary">
+        <ResponseField name="producto_id" type="long">
+          Product identifier
+        </ResponseField>
+        <ResponseField name="nombre" type="string">
+          Product name
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Response Example
+
+```json
+[
+  {
+    "categoria_id": 1,
+    "nombre": "Electronics",
+    "slug": "electronics",
+    "productos": [
+      {
+        "producto_id": 101,
+        "nombre": "Laptop"
+      },
+      {
+        "producto_id": 102,
+        "nombre": "Smartphone"
+      }
+    ]
+  },
+  {
+    "categoria_id": 2,
+    "nombre": "Furniture",
+    "slug": "furniture",
+    "productos": []
+  }
+]
+```
+
+## Request Example
+
+```bash
+curl -X GET https://api.iquea.com/api/categorias
+```
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Successfully retrieved the list of categories
+</ResponseField>

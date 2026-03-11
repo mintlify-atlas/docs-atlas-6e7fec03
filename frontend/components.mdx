@@ -1,0 +1,392 @@
+---
+title: React Components
+description: Reusable UI components in the Iquea Commerce frontend
+---
+
+# React Components
+
+The Iquea frontend uses a component-based architecture with reusable, type-safe React components. All components are located in `src/components/`.
+
+## Component Overview
+
+The application includes three main reusable components:
+
+<CardGroup cols={3}>
+  <Card title="Navbar" icon="bars">
+    Main navigation with search and cart
+  </Card>
+  <Card title="Footer" icon="ellipsis">
+    Site footer with newsletter signup
+  </Card>
+  <Card title="ProductoCard" icon="box">
+    Product display card
+  </Card>
+</CardGroup>
+
+## Navbar Component
+
+The `Navbar` component provides the main site navigation with authentication-aware features.
+
+### Component Code
+
+```typescript src/components/Navbar.tsx
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { MdChair } from 'react-icons/md';
+import { FiShoppingCart, FiUser, FiSearch, FiLogOut } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
+import './Navbar.css';
+
+export default function Navbar() {
+    const { isAuthenticated, logout } = useAuth();
+    const navigate = useNavigate();
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    function handleLogout() {
+        logout();
+        navigate('/');
+    }
+
+    function handleSearch(e: React.FormEvent) {
+        e.preventDefault();
+        if (searchQuery.trim()) {
+            navigate(`/productos?q=${encodeURIComponent(searchQuery.trim())}`);
+            setSearchQuery('');
+            setSearchOpen(false);
+        }
+    }
+
+    return (
+        <header className="navbar">
+            <div className="navbar__container">
+                <Link to="/" className="navbar__logo">
+                    <MdChair className="navbar__logo-icon" />
+                    <span className="navbar__logo-text">Iquea</span>
+                </Link>
+
+                <nav className="navbar__links">
+                    <Link to="/productos" className="navbar__link">Productos</Link>
+                    <Link to="/habitaciones" className="navbar__link">Habitaciones</Link>
+                    <Link to="/nosotros" className="navbar__link">Nosotros</Link>
+                    <Link to="/contacto" className="navbar__link">Contacto</Link>
+                </nav>
+
+                <div className="navbar__actions">
+                    {/* Search functionality */}
+                    <div className={`navbar__search-wrap ${searchOpen ? 'navbar__search-wrap--open' : ''}`}>
+                        {searchOpen && (
+                            <form onSubmit={handleSearch} className="navbar__search-form">
+                                <input
+                                    type="text"
+                                    className="navbar__search-input"
+                                    placeholder="Buscar productos..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    autoFocus
+                                />
+                            </form>
+                        )}
+                        <button className="navbar__icon-btn" onClick={() => setSearchOpen((v) => !v)}>
+                            <FiSearch />
+                        </button>
+                    </div>
+
+                    {/* Conditional auth display */}
+                    {isAuthenticated ? (
+                        <button onClick={handleLogout} className="navbar__icon-btn">
+                            <FiLogOut />
+                        </button>
+                    ) : (
+                        <Link to="/login" className="navbar__icon-btn">
+                            <FiUser />
+                        </Link>
+                    )}
+
+                    {/* Cart (only when authenticated) */}
+                    {isAuthenticated && (
+                        <Link to="/carrito" className="navbar__icon-btn">
+                            <FiShoppingCart />
+                        </Link>
+                    )}
+                </div>
+            </div>
+        </header>
+    );
+}
+```
+
+### Key Features
+
+- **Authentication-aware** - Shows different UI based on `isAuthenticated` state
+- **Search functionality** - Toggleable search bar that navigates to product search
+- **React Icons** - Uses Material Design and Feather icons
+- **Navigation** - React Router `Link` and `useNavigate` for client-side routing
+
+### Usage Example
+
+```typescript App.tsx
+import Navbar from './components/Navbar';
+
+function App() {
+  return (
+    <div className="app-container">
+      <Navbar />
+      {/* Rest of app */}
+    </div>
+  );
+}
+```
+
+## Footer Component
+
+The `Footer` provides site-wide footer with newsletter signup and social links.
+
+### Component Code
+
+```typescript src/components/Footer.tsx
+import { useState } from 'react';
+import { MdChair } from 'react-icons/md';
+import { FiMapPin, FiPhone, FiMail, FiInstagram, FiFacebook, FiArrowRight } from 'react-icons/fi';
+import { FaPinterest } from 'react-icons/fa';
+import './Footer.css';
+
+export default function Footer() {
+    const [email, setEmail] = useState('');
+
+    return (
+        <footer className="footer">
+            <div className="footer__container footer__grid">
+                {/* Brand section */}
+                <div className="footer__brand">
+                    <span className="footer__logo"><MdChair /> Iquea</span>
+                    <p className="footer__tagline">
+                        Inspirando hogares con diseño elegante. Muebles modernos para la vida contemporánea.
+                    </p>
+                    <div className="footer__socials">
+                        <a href="https://instagram.com" target="_blank" rel="noreferrer">
+                            <FiInstagram />
+                        </a>
+                        <a href="https://facebook.com" target="_blank" rel="noreferrer">
+                            <FiFacebook />
+                        </a>
+                        <a href="https://pinterest.com" target="_blank" rel="noreferrer">
+                            <FaPinterest />
+                        </a>
+                    </div>
+                </div>
+
+                {/* Link columns */}
+                <div className="footer__col">
+                    <h4 className="footer__col-title">Tienda</h4>
+                    <a href="/productos">Salón</a>
+                    <a href="/productos">Dormitorio</a>
+                    <a href="/productos">Oficina</a>
+                    <a href="/productos">Jardín</a>
+                </div>
+
+                <div className="footer__col">
+                    <h4 className="footer__col-title">Soporte</h4>
+                    <a href="/contacto">Contacto</a>
+                    <a href="/faq">FAQs</a>
+                    <a href="/envios">Envíos y Devoluciones</a>
+                    <a href="/privacidad">Política de Privacidad</a>
+                </div>
+
+                {/* Newsletter */}
+                <div className="footer__col footer__newsletter">
+                    <h4 className="footer__col-title">Newsletter</h4>
+                    <p>Suscríbete para recibir actualizaciones y descuentos exclusivos.</p>
+                    <form
+                        className="footer__newsletter-form"
+                        onSubmit={(e) => { e.preventDefault(); setEmail(''); }}
+                    >
+                        <input
+                            type="email"
+                            placeholder="Tu email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="footer__newsletter-input"
+                            required
+                        />
+                        <button type="submit" className="footer__newsletter-btn">
+                            <FiArrowRight />
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {/* Bottom bar */}
+            <div className="footer__bottom">
+                <div className="footer__container footer__bottom-inner">
+                    <p>© {new Date().getFullYear()} Iquea. Todos los derechos reservados.</p>
+                    <div className="footer__contact">
+                        <span><FiMapPin /> Calle del Mueble 42, Madrid</span>
+                        <span><FiPhone /> +34 910 000 000</span>
+                        <span><FiMail /> hola@iquea.es</span>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    );
+}
+```
+
+### Key Features
+
+- **Newsletter form** - Controlled form with email state
+- **Social links** - Instagram, Facebook, Pinterest
+- **Contact info** - Phone, email, address
+- **Dynamic copyright** - Uses `new Date().getFullYear()`
+
+## ProductoCard Component
+
+Reusable product card component for displaying products in lists.
+
+### Component Code
+
+```typescript src/components/ProductoCard.tsx
+import { Link } from 'react-router-dom';
+import type { Producto } from '../types';
+import './ProductoCard.css';
+
+interface Props {
+    producto: Producto;
+}
+
+export default function ProductoCard({ producto }: Props) {
+    const precio = producto.precioCantidad?.toFixed(2) ?? '—';
+
+    return (
+        <Link to={`/productos/${producto.producto_id}`} className="producto-card">
+            <div className="producto-card__img-wrap">
+                <img
+                    src={producto.imagen_url || 'https://placehold.co/400x300?text=Sin+imagen'}
+                    alt={producto.nombre}
+                    className="producto-card__img"
+                    loading="lazy"
+                />
+                {producto.es_destacado && (
+                    <span className="producto-card__badge">Destacado</span>
+                )}
+                {producto.stock === 0 && (
+                    <span className="producto-card__badge producto-card__badge--agotado">Agotado</span>
+                )}
+            </div>
+
+            <div className="producto-card__body">
+                {producto.categoria && (
+                    <span className="producto-card__categoria">{producto.categoria.nombre}</span>
+                )}
+                <h3 className="producto-card__nombre">{producto.nombre}</h3>
+                <p className="producto-card__precio">
+                    {precio} <span className="producto-card__moneda">{producto.precioMoneda}</span>
+                </p>
+            </div>
+        </Link>
+    );
+}
+```
+
+### Props Interface
+
+```typescript
+interface Props {
+    producto: Producto;  // Full product object from API
+}
+```
+
+The `Producto` type includes:
+- `producto_id` - Unique product ID
+- `nombre` - Product name
+- `precioCantidad` - Price amount
+- `precioMoneda` - Currency (e.g., "EUR")
+- `imagen_url` - Product image URL
+- `es_destacado` - Featured product flag
+- `stock` - Available inventory
+- `categoria` - Category object with `nombre`
+
+### Usage Example
+
+```typescript ProductList.tsx
+import ProductoCard from '../components/ProductoCard';
+import type { Producto } from '../types';
+
+function ProductList({ productos }: { productos: Producto[] }) {
+  return (
+    <div className="product-grid">
+      {productos.map((producto) => (
+        <ProductoCard key={producto.producto_id} producto={producto} />
+      ))}
+    </div>
+  );
+}
+```
+
+## Styling Approach
+
+All components use **pure CSS** with a BEM-like naming convention:
+
+```css
+/* Block */
+.navbar { }
+
+/* Element */
+.navbar__container { }
+.navbar__logo { }
+.navbar__link { }
+
+/* Modifier */
+.navbar__search-wrap--open { }
+.producto-card__badge--agotado { }
+```
+
+### Benefits
+
+- **No framework overhead** - Smaller bundle size
+- **Full control** - Custom styling without constraints
+- **Scoped styles** - Component-specific CSS files
+- **Maintainable** - Clear naming convention
+
+## Component Best Practices
+
+<AccordionGroup>
+  <Accordion title="Type Safety">
+    All components use TypeScript with explicit prop interfaces:
+    ```typescript
+    interface Props {
+        producto: Producto;
+    }
+    
+    export default function ProductoCard({ producto }: Props) {
+        // Component implementation
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="React Hooks">
+    Components use modern React hooks:
+    - `useState` for local state
+    - `useNavigate` for programmatic navigation
+    - `useAuth` and `useCart` for context consumption
+  </Accordion>
+
+  <Accordion title="Accessibility">
+    Components include accessibility features:
+    - `aria-label` attributes on icon buttons
+    - Semantic HTML (`<header>`, `<nav>`, `<footer>`)
+    - `loading="lazy"` on images
+  </Accordion>
+
+  <Accordion title="Performance">
+    - Lazy loading images with `loading="lazy"`
+    - Conditional rendering to minimize DOM nodes
+    - Functional components for better performance
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<Card title="View State Management" icon="database" href="./state-management">
+  Learn how components consume authentication and cart state using React Context
+</Card>

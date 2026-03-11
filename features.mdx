@@ -1,0 +1,407 @@
+---
+title: 'Platform Features'
+description: 'Comprehensive overview of Iquea Commerce platform capabilities'
+icon: 'sparkles'
+---
+
+Iquea Commerce is a full-featured e-commerce platform designed specifically for furniture retail. The platform provides a complete suite of tools for managing products, processing orders, and delivering an exceptional customer experience.
+
+## Core Features
+
+<CardGroup cols={2}>
+  <Card title="Product Catalog Management" icon="couch">
+    Comprehensive product management system with categories, SKUs, pricing, dimensions, stock tracking, and featured product highlighting.
+  </Card>
+  <Card title="JWT Authentication" icon="shield-halved">
+    Secure token-based authentication with role-based access control for administrators and customers.
+  </Card>
+  <Card title="Shopping Cart" icon="cart-shopping">
+    Persistent shopping cart with localStorage synchronization, quantity management, and real-time total calculations.
+  </Card>
+  <Card title="Order Management" icon="box">
+    Complete order processing system with status tracking, unique reference codes, and order history.
+  </Card>
+  <Card title="Advanced Search" icon="magnifying-glass">
+    Multi-criteria product search including name filtering, price range queries, and featured product discovery.
+  </Card>
+  <Card title="Admin Dashboard" icon="gauge-high">
+    Full administrative control for product, category, and user management with role-based permissions.
+  </Card>
+</CardGroup>
+
+## Authentication & Security
+
+The platform implements enterprise-grade security using JWT (JSON Web Tokens) and Spring Security.
+
+### JWT Token Generation
+
+When users register or login, the backend generates a JWT token containing their email and role:
+
+```java AuthController.java
+@PostMapping("/login")
+public ResponseEntity<TokenDTO> login(@RequestBody LoginDTO dto) {
+    Usuario usuario = usuarioRepository.findByEmailValue(dto.getEmail())
+            .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+    if (!passwordEncoder.matches(dto.getPassword(), usuario.getPassword())) {
+        throw new IllegalArgumentException("Contraseña incorrecta");
+    }
+
+    String token = jwtUtil.generarToken(
+            usuario.getEmail().getValue(),
+            usuario.getRol().name()
+    );
+    return ResponseEntity.ok(new TokenDTO(token));
+}
+```
+
+### JWT Utility Implementation
+
+The JWT utility handles token generation, validation, and claims extraction:
+
+```java JwtUtil.java
+public String generarToken(String email, String rol) {
+    return Jwts.builder()
+            .subject(email)
+            .claim("rol", rol)
+            .issuedAt(new Date())
+            .expiration(new Date(System.currentTimeMillis() + EXPIRATION_MS))
+            .signWith(key)
+            .compact();
+}
+
+public boolean esValido(String token) {
+    try {
+        parsear(token);
+        return true;
+    } catch (JwtException | IllegalArgumentException e) {
+        return false;
+    }
+}
+```
+
+### Frontend Authentication Context
+
+The React frontend maintains authentication state using Context API:
+
+```tsx AuthContext.tsx
+export function AuthProvider({ children }: { children: ReactNode }) {
+    const [token, setTokenState] = useState<string | null>(
+        () => localStorage.getItem('token')
+    );
+
+    const decoded = token ? jwtDecode<JwtPayload>(token) : null;
+    const email = decoded?.sub ?? null;
+    const rol = decoded?.rol ?? null;
+    const isAuthenticated = !!token && (decoded?.exp ?? 0) > Date.now() / 1000;
+
+    function setToken(newToken: string | null) {
+        if (newToken) {
+            localStorage.setItem('token', newToken);
+        } else {
+            localStorage.removeItem('token');
+        }
+        setTokenState(newToken);
+    }
+
+    return (
+        <AuthContext.Provider value={{ token, email, rol, isAuthenticated, setToken, logout }}>
+            {children}
+        </AuthContext.Provider>
+    );
+}
+```
+
+## Product Management
+
+### Product Model
+
+Products are stored with comprehensive metadata including dimensions, pricing, and inventory:
+
+```java Producto.java
+@Entity
+@Table(name = "Producto")
+public class Producto {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long producto_id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "categoria_id")
+    private Categorias categoria;
+
+    @Column(name = "nombre", length = 155, nullable = false)
+    private String nombre;
+
+    @Column(name = "sku", unique = true, nullable = false, length = 50)
+    private String sku;
+
+    @Embedded
+    private Precio precio;
+
+    @Column(name = "es_destacado")
+    private boolean es_destacado;
+
+    @Embedded
+    private Dimensiones dimensiones;
+
+    @Column(name = "stock", nullable = false)
+    private Integer stock = 0;
+
+    @Column(name = "imagen_url")
+    private String imagenUrl;
+}
+```
+
+### Product Search & Filtering
+
+The platform provides multiple search endpoints for flexible product discovery:
+
+```java ProductoController.java
+@GetMapping("/buscar")
+public ResponseEntity<List<ProductoDetalleDTO>> buscarPorNombre(@RequestParam String nombre) {
+    List<Producto> productos = productoService.obtenerProductoPorLetra(nombre);
+    return ResponseEntity.ok(productoMapper.toDTOlist(productos));
+}
+
+@GetMapping("/precio")
+public ResponseEntity<List<ProductoDetalleDTO>> porRangoPrecio(
+        @RequestParam BigDecimal min,
+        @RequestParam BigDecimal max) {
+    List<Producto> productos = productoService.obtenerProductoPorRango(min, max);
+    return ResponseEntity.ok(productoMapper.toDTOlist(productos));
+}
+
+@GetMapping("/destacados")
+public ResponseEntity<List<ProductoDetalleDTO>> destacados() {
+    List<Producto> productos = productoService.obtenerProductosPorDestacado(true);
+    return ResponseEntity.ok(productoMapper.toDTOlist(productos));
+}
+```
+
+## Shopping Cart System
+
+The shopping cart is implemented client-side with localStorage persistence for seamless user experience.
+
+### Cart Context Implementation
+
+```tsx CartContext.tsx
+export function CartProvider({ children }: { children: ReactNode }) {
+    const [cart, setCart] = useState<CartItem[]>(() => {
+        const saved = localStorage.getItem('cart');
+        return saved ? JSON.parse(saved) : [];
+    });
+
+    useEffect(() => {
+        localStorage.setItem('cart', JSON.stringify(cart));
+    }, [cart]);
+
+    const addToCart = (product: Producto, quantity: number) => {
+        setCart((prev) => {
+            const existing = prev.find((item) => item.producto.producto_id === product.producto_id);
+            if (existing) {
+                return prev.map((item) =>
+                    item.producto.producto_id === product.producto_id
+                        ? { ...item, cantidad: item.cantidad + quantity }
+                        : item
+                );
+            }
+            return [...prev, { producto: product, cantidad: quantity }];
+        });
+    };
+
+    const total = cart.reduce((sum, item) => sum + (item.producto.precioCantidad * item.cantidad), 0);
+    const count = cart.reduce((sum, item) => sum + item.cantidad, 0);
+
+    return (
+        <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, total, count }}>
+            {children}
+        </CartContext.Provider>
+    );
+}
+```
+
+<Note>
+The cart persists across browser sessions using localStorage, ensuring customers don't lose their selections.
+</Note>
+
+## Order Management
+
+### Order Model with Auto-Generated References
+
+Orders automatically generate unique reference codes for tracking:
+
+```java Pedido.java
+@Entity
+@Table(name = "Pedidos")
+public class Pedido {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long pedido_id;
+
+    @ManyToOne
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
+
+    @Column(name = "fecha_pedido", nullable = false)
+    private LocalDateTime fechaPedido;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado", nullable = false)
+    private EstadoPedido estado;
+
+    @Column(name = "referencia", unique = true, nullable = false, length = 10)
+    private String referencia;
+
+    @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Detalle_pedido> detalles = new ArrayList<>();
+
+    @PrePersist
+    private void generarReferencia() {
+        if (this.referencia == null) {
+            this.referencia = generarCodigoAleatorio();
+        }
+    }
+
+    public BigDecimal calcularTotal() {
+        return detalles.stream()
+                .map(detalle -> detalle.getPrecioUnitario().multiply(new BigDecimal(detalle.getCantidad())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+}
+```
+
+### Order Status Tracking
+
+Orders can be filtered by status for efficient order management:
+
+```java PedidoController.java
+@GetMapping("/estado/{estado}")
+public ResponseEntity<List<PedidoDetalleDTO>> porEstado(@PathVariable EstadoPedido estado) {
+    List<Pedido> pedidos = pedidoService.buscarPorEstado(estado);
+    return ResponseEntity.ok(pedidoMapper.toDTOlist(pedidos));
+}
+```
+
+## Role-Based Access Control
+
+### User Roles
+
+The platform supports two user roles:
+
+```java RolUsuario.java
+public enum RolUsuario {
+    ADMIN,
+    CLIENTE
+}
+```
+
+### Security Configuration
+
+Spring Security enforces role-based permissions:
+
+```java SecurityConfig.java
+@Bean
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    http
+        .csrf(csrf -> csrf.disable())
+        .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(auth -> auth
+            // Public routes
+            .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
+            .requestMatchers(HttpMethod.GET,  "/api/productos/**").permitAll()
+            .requestMatchers(HttpMethod.GET,  "/api/categorias/**").permitAll()
+            // Only ADMIN can create/edit/delete products and categories
+            .requestMatchers(HttpMethod.POST,   "/api/productos/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.PUT,    "/api/productos/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/api/productos/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.POST,   "/api/categorias/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.PUT,    "/api/categorias/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/api/categorias/**").hasRole("ADMIN")
+            // Everything else requires authentication
+            .anyRequest().authenticated()
+        )
+        .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+    return http.build();
+}
+```
+
+<Warning>
+All product and category modification endpoints require ADMIN role. Regular customers (CLIENTE) can only browse and purchase.
+</Warning>
+
+## Category Management
+
+Products are organized into categories for easy navigation:
+
+```java CategoriaController.java
+@RestController
+@RequestMapping("/api/categorias")
+public class CategoriaController {
+    
+    @GetMapping
+    public ResponseEntity<List<CategoriaDetalleDTO>> listarTodas(){
+        List<Categorias> categorias = categoriaService.obtenerTodaslasCategorias();
+        return ResponseEntity.ok(categorias.stream().map(categoriaMapper::toDTO).toList());
+    }
+
+    @GetMapping("/{nombre}")
+    public ResponseEntity<CategoriaDetalleDTO> obtenerPorNombre(@PathVariable String nombre){
+        return categoriaService.obtenerCategoriaPorNombre(nombre)
+        .map(c-> ResponseEntity.ok(categoriaMapper::toDTO(c)))
+        .orElse(ResponseEntity.notFound().build());
+    }
+}
+```
+
+## API Client Integration
+
+The frontend uses a centralized API client with automatic JWT token injection:
+
+```typescript client.ts
+const BASE_URL = 'http://localhost:8080/api';
+
+function getToken(): string | null {
+    return localStorage.getItem('token');
+}
+
+function authHeaders(): HeadersInit {
+    const token = getToken();
+    return {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+}
+
+export async function apiFetch<T>(
+    path: string,
+    options: RequestInit = {}
+): Promise<T> {
+    const res = await fetch(`${BASE_URL}${path}`, {
+        ...options,
+        headers: {
+            ...authHeaders(),
+            ...(options.headers ?? {}),
+        },
+    });
+
+    if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Error desconocido' }));
+        throw new Error(error.message ?? `Error ${res.status}`);
+    }
+
+    return res.json() as Promise<T>;
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture Overview" icon="diagram-project" href="/architecture">
+    Explore the system architecture and technology stack
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/auth/login">
+    Browse complete API endpoint documentation
+  </Card>
+</CardGroup>

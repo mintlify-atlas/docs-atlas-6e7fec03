@@ -1,0 +1,182 @@
+---
+title: "Get Featured Products"
+api: "GET /api/productos/destacados"
+description: "Retrieve all products marked as featured"
+---
+
+## Authentication
+
+This endpoint is publicly accessible and does not require authentication.
+
+## Response
+
+Returns an array of featured product objects.
+
+<ResponseField name="productos" type="array">
+  Array of featured product objects
+  
+  <Expandable title="Product Object">
+    <ResponseField name="producto_id" type="long">
+      Unique identifier for the product
+    </ResponseField>
+    
+    <ResponseField name="sku" type="string">
+      Stock Keeping Unit
+    </ResponseField>
+    
+    <ResponseField name="nombre" type="string">
+      Product name
+    </ResponseField>
+    
+    <ResponseField name="descripcion" type="string">
+      Product description
+    </ResponseField>
+    
+    <ResponseField name="precioCantidad" type="decimal">
+      Price amount
+    </ResponseField>
+    
+    <ResponseField name="precioMoneda" type="string">
+      Currency code
+    </ResponseField>
+    
+    <ResponseField name="dimensionesAlto" type="double">
+      Height dimension
+    </ResponseField>
+    
+    <ResponseField name="dimensionesAncho" type="double">
+      Width dimension
+    </ResponseField>
+    
+    <ResponseField name="dimensionesProfundo" type="double">
+      Depth dimension
+    </ResponseField>
+    
+    <ResponseField name="es_destacado" type="boolean">
+      Always true for featured products
+    </ResponseField>
+    
+    <ResponseField name="stock" type="integer">
+      Available quantity
+    </ResponseField>
+    
+    <ResponseField name="imagen_url" type="string">
+      Product image URL
+    </ResponseField>
+    
+    <ResponseField name="categoria" type="object">
+      Category information
+      
+      <Expandable title="Category Object">
+        <ResponseField name="categoria_id" type="long">
+          Category unique identifier
+        </ResponseField>
+        
+        <ResponseField name="nombre" type="string">
+          Category name
+        </ResponseField>
+        
+        <ResponseField name="slug" type="string">
+          URL-friendly category identifier
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl --location 'https://api.iquea.com/api/productos/destacados'
+```
+
+```javascript JavaScript
+fetch('https://api.iquea.com/api/productos/destacados')
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+
+```python Python
+import requests
+
+response = requests.get('https://api.iquea.com/api/productos/destacados')
+featured_products = response.json()
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+[
+  {
+    "producto_id": 1,
+    "sku": "IKEA-TABLE-001",
+    "nombre": "Mesa de Comedor Moderna",
+    "descripcion": "Mesa de comedor elegante con acabado en roble",
+    "precioCantidad": 299.99,
+    "precioMoneda": "USD",
+    "dimensionesAlto": 75.0,
+    "dimensionesAncho": 180.0,
+    "dimensionesProfundo": 90.0,
+    "es_destacado": true,
+    "stock": 15,
+    "imagen_url": "https://images.iquea.com/mesa-comedor-001.jpg",
+    "categoria": {
+      "categoria_id": 3,
+      "nombre": "Mesas",
+      "slug": "mesas"
+    }
+  },
+  {
+    "producto_id": 23,
+    "sku": "IKEA-SOFA-023",
+    "nombre": "Sofá Modular de 3 Plazas",
+    "descripcion": "Sofá modular con tapicería de lino y cojines ergonómicos",
+    "precioCantidad": 899.99,
+    "precioMoneda": "USD",
+    "dimensionesAlto": 85.0,
+    "dimensionesAncho": 220.0,
+    "dimensionesProfundo": 95.0,
+    "es_destacado": true,
+    "stock": 6,
+    "imagen_url": "https://images.iquea.com/sofa-023.jpg",
+    "categoria": {
+      "categoria_id": 7,
+      "nombre": "Sofás",
+      "slug": "sofas"
+    }
+  },
+  {
+    "producto_id": 89,
+    "sku": "IKEA-LAMP-089",
+    "nombre": "Lámpara de Pie LED",
+    "descripcion": "Lámpara de pie regulable con luz LED de bajo consumo",
+    "precioCantidad": 79.99,
+    "precioMoneda": "USD",
+    "dimensionesAlto": 150.0,
+    "dimensionesAncho": 30.0,
+    "dimensionesProfundo": 30.0,
+    "es_destacado": true,
+    "stock": 34,
+    "imagen_url": "https://images.iquea.com/lampara-089.jpg",
+    "categoria": {
+      "categoria_id": 12,
+      "nombre": "Iluminación",
+      "slug": "iluminacion"
+    }
+  }
+]
+```
+
+```json 200 - Empty Results
+[]
+```
+</ResponseExample>
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Successfully retrieved featured products (may be an empty array if no featured products exist)
+</ResponseField>
+
+<Info>
+  Featured products are typically displayed prominently on the homepage or in promotional sections. Use this endpoint to populate featured product carousels or highlight sections.
+</Info>

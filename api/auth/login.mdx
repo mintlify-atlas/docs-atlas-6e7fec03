@@ -1,0 +1,83 @@
+---
+title: 'Login'
+api: 'POST /api/auth/login'
+description: 'Authenticate a user and receive a JWT token'
+---
+
+## Request
+
+Authenticate an existing user with their email and password. Returns a JWT token for subsequent authenticated requests.
+
+### Body Parameters
+
+<ParamField body="email" type="string" required>
+  User's email address
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User's password
+</ParamField>
+
+### Request Example
+
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "securePassword123"
+  }'
+```
+
+```json
+{
+  "email": "user@example.com",
+  "password": "securePassword123"
+}
+```
+
+## Response
+
+<ResponseField name="token" type="string">
+  JWT authentication token
+</ResponseField>
+
+<ResponseField name="tipo" type="string">
+  Token type (always "Bearer")
+</ResponseField>
+
+### Response Example
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "tipo": "Bearer"
+}
+```
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Successfully authenticated. Returns JWT token.
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Invalid credentials. Incorrect password provided.
+  
+  **Error Message**: "Contraseña incorrecta"
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  User not found with the provided email address.
+  
+  **Error Message**: "Usuario no encontrado"
+</ResponseField>
+
+## Usage
+
+After successful login, include the token in subsequent requests:
+
+```bash
+curl -X GET http://localhost:8080/api/resource \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```

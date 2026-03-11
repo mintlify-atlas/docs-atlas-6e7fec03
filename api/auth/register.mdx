@@ -1,0 +1,147 @@
+---
+title: 'Register'
+api: 'POST /api/auth/registro'
+description: 'Register a new user account'
+---
+
+## Request
+
+Create a new user account with complete profile information. Returns a JWT token upon successful registration.
+
+### Body Parameters
+
+<ParamField body="username" type="string" required>
+  Unique username for the account
+</ParamField>
+
+<ParamField body="nombre" type="string" required>
+  User's first name
+</ParamField>
+
+<ParamField body="apellidos" type="string" required>
+  User's last name(s)
+</ParamField>
+
+<ParamField body="email" type="object" required>
+  User's email address as an Email value object. In JSON, provide as a string or object with `value` property.
+  
+  **Validation**: Must be a valid email format
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User's password. Will be encrypted before storage.
+  
+  **Validation**: Should meet security requirements
+</ParamField>
+
+<ParamField body="fecha_nacimiento" type="string" required>
+  User's date of birth in ISO 8601 format (YYYY-MM-DD)
+  
+  **Example**: "1990-01-15"
+</ParamField>
+
+<ParamField body="direccion_envio" type="string" required>
+  Shipping address for orders
+</ParamField>
+
+<ParamField body="rol" type="string" required>
+  User role in the system
+  
+  **Allowed values**: `ADMIN`, `CLIENTE`
+  
+  **Default**: `CLIENTE` (for customer registrations)
+</ParamField>
+
+<ParamField body="activo" type="boolean" optional>
+  Whether the account is active
+  
+  **Default**: `true`
+</ParamField>
+
+<ParamField body="usuario_id" type="integer" optional>
+  User ID (auto-generated, typically not provided during registration)
+</ParamField>
+
+### Request Example
+
+```bash
+curl -X POST http://localhost:8080/api/auth/registro \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "johndoe",
+    "nombre": "John",
+    "apellidos": "Doe",
+    "email": "john.doe@example.com",
+    "password": "securePassword123",
+    "fecha_nacimiento": "1990-01-15",
+    "direccion_envio": "123 Main St, Madrid, Spain",
+    "rol": "CLIENTE",
+    "activo": true
+  }'
+```
+
+```json
+{
+  "username": "johndoe",
+  "nombre": "John",
+  "apellidos": "Doe",
+  "email": "john.doe@example.com",
+  "password": "securePassword123",
+  "fecha_nacimiento": "1990-01-15",
+  "direccion_envio": "123 Main St, Madrid, Spain",
+  "rol": "CLIENTE",
+  "activo": true
+}
+```
+
+## Response
+
+<ResponseField name="token" type="string">
+  JWT authentication token for the newly created user
+</ResponseField>
+
+<ResponseField name="tipo" type="string">
+  Token type (always "Bearer")
+</ResponseField>
+
+### Response Example
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "tipo": "Bearer"
+}
+```
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  User successfully registered. Returns JWT token.
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Invalid request data. Possible causes:
+  - Missing required fields
+  - Invalid email format
+  - Username or email already exists
+  - Invalid date format for `fecha_nacimiento`
+  - Invalid role value (must be ADMIN or CLIENTE)
+</ResponseField>
+
+## Validation Rules
+
+- **email**: Must be a valid email format and unique in the system
+- **username**: Must be unique in the system
+- **password**: Stored encrypted using BCrypt password encoder
+- **fecha_nacimiento**: Must be in ISO 8601 date format (YYYY-MM-DD)
+- **rol**: Must be either `ADMIN` or `CLIENTE`
+- **All required fields**: Must be provided and not null
+
+## Usage
+
+After successful registration, the user is automatically authenticated and can use the returned token:
+
+```bash
+curl -X GET http://localhost:8080/api/resource \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```

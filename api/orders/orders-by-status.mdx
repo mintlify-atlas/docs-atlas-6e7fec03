@@ -1,0 +1,159 @@
+---
+title: "Get Orders by Status"
+api: "GET /api/pedidos/estado/{estado}"
+---
+
+Retrieves all orders filtered by their status (estado).
+
+## Authentication
+
+Requires JWT token in the Authorization header.
+
+```bash
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `estado` | String | Yes | Order status to filter by (see EstadoPedido values) |
+
+### Valid Estado Values
+
+- `PENDIENTE` - Pending orders
+- `PAGADO` - Paid orders
+- `ENVIADO` - Shipped orders
+- `ENTREGADO` - Delivered orders
+- `CANCELADO` - Cancelled orders
+
+## Response
+
+Returns an array of orders matching the specified status.
+
+### Response Body
+
+```json
+[
+  {
+    "pedido_id": 42,
+    "referencia": "ORD-2026-042",
+    "usuario": {
+      "usuario_id": 5,
+      "username": "john_doe",
+      "email": {
+        "address": "john@example.com"
+      }
+    },
+    "fechaPedido": "2026-03-11T14:22:35",
+    "estado": "ENVIADO",
+    "detalles": [
+      {
+        "detalle_id": 101,
+        "producto": {
+          "producto_id": 10,
+          "nombre": "BILLY Bookcase",
+          "precioCantidad": 49.99,
+          "precioMoneda": "USD",
+          "es_destacado": false
+        },
+        "cantidad": 2,
+        "precioUnitario": 49.99,
+        "subtotal": 99.98
+      }
+    ],
+    "total": 99.98
+  },
+  {
+    "pedido_id": 43,
+    "referencia": "ORD-2026-043",
+    "usuario": {
+      "usuario_id": 8,
+      "username": "jane_smith",
+      "email": {
+        "address": "jane@example.com"
+      }
+    },
+    "fechaPedido": "2026-03-11T15:10:20",
+    "estado": "ENVIADO",
+    "detalles": [
+      {
+        "detalle_id": 103,
+        "producto": {
+          "producto_id": 15,
+          "nombre": "MALM Dresser",
+          "precioCantidad": 129.99,
+          "precioMoneda": "USD",
+          "es_destacado": true
+        },
+        "cantidad": 1,
+        "precioUnitario": 129.99,
+        "subtotal": 129.99
+      }
+    ],
+    "total": 129.99
+  }
+]
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `pedido_id` | Long | Unique order identifier |
+| `referencia` | String | Auto-generated order reference number |
+| `usuario` | Object | User who placed the order |
+| `usuario.usuario_id` | Long | User ID |
+| `usuario.username` | String | Username |
+| `usuario.email.address` | String | User email address |
+| `fechaPedido` | DateTime | Order creation timestamp |
+| `estado` | String | Order status (matches the requested estado) |
+| `detalles` | Array | Array of order line items |
+| `detalles[].detalle_id` | Long | Line item ID |
+| `detalles[].producto` | Object | Product details |
+| `detalles[].cantidad` | Integer | Quantity ordered |
+| `detalles[].precioUnitario` | BigDecimal | Unit price at time of order |
+| `detalles[].subtotal` | BigDecimal | Line item subtotal |
+| `total` | BigDecimal | Total order amount |
+
+## Example Requests
+
+### Get all pending orders
+
+```bash
+curl -X GET "https://api.iquea.com/api/pedidos/estado/PENDIENTE" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+### Get all shipped orders
+
+```bash
+curl -X GET "https://api.iquea.com/api/pedidos/estado/ENVIADO" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+### Get all delivered orders
+
+```bash
+curl -X GET "https://api.iquea.com/api/pedidos/estado/ENTREGADO" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200 | Success - Returns array of orders (may be empty) |
+| 400 | Bad request - Invalid estado value |
+| 401 | Unauthorized - Invalid or missing token |
+| 500 | Internal server error |
+
+## Use Cases
+
+- Dashboard views showing orders by status
+- Order fulfillment workflows (pending → paid → shipped → delivered)
+- Customer service queries
+- Analytics and reporting on order statuses

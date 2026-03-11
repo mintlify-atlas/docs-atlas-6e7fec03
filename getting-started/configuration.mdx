@@ -1,0 +1,336 @@
+---
+title: 'Configuration'
+description: 'Configure database credentials, CORS, JWT, and application settings'
+---
+
+This guide covers all configuration options for Iquea Commerce, including database setup, security settings, and environment variables.
+
+## Configuration Files
+
+The main configuration file is located at:
+
+```
+Iqüea_back/src/main/resources/application.properties
+```
+
+---
+
+## Database Configuration
+
+### Connection Settings
+
+The application connects to MySQL using the following default configuration:
+
+```properties
+# Database connection URL
+spring.datasource.url=jdbc:mysql://localhost:3306/apiIquea?createDatabaseIfNotExist=true
+
+# Database credentials (with environment variable fallbacks)
+spring.datasource.username=${DB_USERNAME:root}
+spring.datasource.password=${DB_PASSWORD:MCS_47_2006}
+
+# MySQL JDBC driver
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+```
+
+### Environment Variables (Recommended)
+
+For security and portability, use **environment variables** instead of hardcoding credentials:
+
+<CodeGroup>
+
+```bash Linux/macOS
+# Add to ~/.bashrc or ~/.zshrc
+export DB_USERNAME="root"
+export DB_PASSWORD="your_mysql_password"
+
+# Apply changes
+source ~/.bashrc
+```
+
+```powershell Windows (PowerShell)
+# Set environment variables for current session
+$env:DB_USERNAME="root"
+$env:DB_PASSWORD="your_mysql_password"
+
+# Set permanently (system-wide)
+[System.Environment]::SetEnvironmentVariable('DB_USERNAME', 'root', 'User')
+[System.Environment]::SetEnvironmentVariable('DB_PASSWORD', 'your_mysql_password', 'User')
+```
+
+```bash Docker
+# docker-compose.yml
+services:
+  backend:
+    environment:
+      - DB_USERNAME=root
+      - DB_PASSWORD=your_mysql_password
+```
+
+</CodeGroup>
+
+<Warning>
+  Never commit database passwords to version control. Always use environment variables or external configuration files (e.g., `.env` files) that are excluded from Git.
+</Warning>
+
+### IDE Configuration
+
+**IntelliJ IDEA:**
+
+1. Go to **Run → Edit Configurations**
+2. Select your Spring Boot run configuration
+3. Add environment variables in the **Environment variables** field:
+   ```
+   DB_USERNAME=root;DB_PASSWORD=your_password
+   ```
+
+**VS Code:**
+
+Create a `.env` file in the `Iqüea_back` directory (add to `.gitignore`):
+
+```env
+DB_USERNAME=root
+DB_PASSWORD=your_mysql_password
+```
+
+---
+
+## JPA/Hibernate Configuration
+
+### Schema Generation Strategy
+
+```properties
+# Automatically update database schema on application start
+spring.jpa.hibernate.ddl-auto=update
+```
+
+**Available options:**
+
+| Option | Description | Use Case |
+|--------|-------------|----------|
+| `create` | Drop and recreate tables on startup | Development (data loss) |
+| `create-drop` | Create tables, drop on shutdown | Testing |
+| `update` | Update schema without data loss | **Development (default)** |
+| `validate` | Validate schema, no changes | Production |
+| `none` | No schema management | Production with migrations |
+
+<Note>
+  In production, use `validate` or `none` and manage schema changes with database migration tools like Flyway or Liquibase.
+</Note>
+
+### SQL Logging
+
+```properties
+# Show SQL statements in console (useful for debugging)
+spring.jpa.show-sql=true
+
+# MySQL dialect for Hibernate
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+```
+
+<Warning>
+  Set `spring.jpa.show-sql=false` in production to avoid performance overhead and log clutter.
+</Warning>
+
+### Data Initialization
+
+```properties
+# Load initial data from data.sql
+spring.sql.init.mode=always
+spring.jpa.defer-datasource-initialization=true
+spring.sql.init.data-locations=classpath:data.sql
+```
+
+The `data.sql` file contains:
+- 6 product categories (Salón, Dormitorio, Cocina, Baño, Oficina, Exterior)
+- 17 sample products with images and descriptions
+- Test user accounts (admin, maria123, carlos99)
+
+<Note>
+  The `defer-datasource-initialization=true` setting ensures that Hibernate creates tables **before** running `data.sql` scripts.
+</Note>
+
+---
+
+## Security Configuration
+
+### JWT Authentication
+
+JSON Web Tokens are configured in `JwtUtil.java`:
+
+```java
+private static final String SECRET = "iquea-super-secret-key-2024-must-be-long-enough-32chars";
+private static final long EXPIRATION_MS = 86400000L; // 24 hours
+```
+
+**To change the JWT secret (recommended for production):**
+
+1. Open `src/main/java/com/edu/mcs/Iquea/security/JwtUtil.java`
+2. Replace the `SECRET` constant with a strong, randomly generated string (minimum 32 characters)
+3. Alternatively, load from environment variable:
+
+```java
+private static final String SECRET = System.getenv("JWT_SECRET") != null 
+    ? System.getenv("JWT_SECRET") 
+    : "iquea-super-secret-key-2024-must-be-long-enough-32chars";
+```
+
+<Warning>
+  **Security Risk:** The default JWT secret is hardcoded and publicly visible. Always change it before deploying to production.
+</Warning>
+
+**Generate a secure JWT secret:**
+
+```bash
+# Linux/macOS
+openssl rand -base64 32
+
+# Node.js
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+
+# PowerShell
+[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
+```
+
+### Token Expiration
+
+Tokens expire after **24 hours** (86400000 milliseconds). To change:
+
+```java
+private static final long EXPIRATION_MS = 604800000L; // 7 days
+```
+
+---
+
+## CORS Configuration
+
+Cross-Origin Resource Sharing (CORS) is configured in `SecurityConfig.java`:
+
+```java
+configuration.setAllowedOrigins(Arrays.asList(
+    "http://localhost:5173",   // Vite dev server
+    "http://127.0.0.1:5173"    // Alternative localhost
+));
+configuration.setAllowedMethods(Arrays.asList(
+    "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
+));
+configuration.setAllowedHeaders(Arrays.asList(
+    "Authorization", "Content-Type", "X-Requested-With", 
+    "Accept", "Origin", "Access-Control-Request-Method", 
+    "Access-Control-Request-Headers"
+));
+configuration.setAllowCredentials(true);
+configuration.setMaxAge(3600L); // Cache preflight for 1 hour
+```
+
+### Adding Production Origins
+
+When deploying to production, add your frontend domain:
+
+```java
+configuration.setAllowedOrigins(Arrays.asList(
+    "http://localhost:5173",           // Development
+    "https://your-domain.com",         // Production
+    "https://www.your-domain.com"      // Production (www)
+));
+```
+
+<Note>
+  CORS is a browser security feature that prevents unauthorized cross-origin requests. The backend must explicitly allow requests from your frontend domain.
+</Note>
+
+---
+
+## Server Configuration
+
+### Port Configuration
+
+```properties
+# Application server port (default: 8080)
+server.port=8080
+```
+
+**To change the port:**
+
+```properties
+server.port=9090
+```
+
+**Or use environment variable:**
+
+```bash
+export SERVER_PORT=9090
+```
+
+```properties
+server.port=${SERVER_PORT:8080}
+```
+
+### Application Name
+
+```properties
+spring.application.name=Iquea
+```
+
+This appears in logs and monitoring tools.
+
+---
+
+## Physical Naming Strategy
+
+```properties
+# Preserve entity/column names without transformation
+spring.jpa.hibernate.naming.physical-strategy=org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+```
+
+This prevents Hibernate from converting camelCase to snake_case (e.g., `productName` → `product_name`).
+
+---
+
+## Complete Configuration Reference
+
+Here's the full `application.properties` file with annotations:
+
+```properties
+# Application Identification
+spring.application.name=Iquea
+
+# Server Configuration
+server.port=8080
+
+# Database Connection
+spring.datasource.url=jdbc:mysql://localhost:3306/apiIquea?createDatabaseIfNotExist=true
+spring.datasource.username=${DB_USERNAME:root}
+spring.datasource.password=${DB_PASSWORD:MCS_47_2006}
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# JPA/Hibernate Configuration
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+spring.jpa.hibernate.naming.physical-strategy=org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+
+# Data Initialization
+spring.sql.init.mode=always
+spring.jpa.defer-datasource-initialization=true
+spring.sql.init.data-locations=classpath:data.sql
+```
+
+---
+
+## Configuration Checklist
+
+Before running the application, ensure:
+
+- [ ] MySQL server is running on port 3306
+- [ ] Database `apiIquea` exists (or `createDatabaseIfNotExist=true` is set)
+- [ ] Database credentials are configured via environment variables
+- [ ] JWT secret has been changed from default
+- [ ] CORS origins include your frontend URL
+- [ ] Port 8080 is available (or changed to another port)
+
+---
+
+## Next Steps
+
+With configuration complete, you're ready to [run the application](/getting-started/running-the-app).

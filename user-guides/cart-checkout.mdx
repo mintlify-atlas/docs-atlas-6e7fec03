@@ -1,0 +1,310 @@
+---
+title: Cart and Checkout
+description: Manage your shopping cart, adjust quantities, and complete your purchase in Iquea Commerce
+---
+
+## Overview
+
+The shopping cart allows you to collect products, manage quantities, and proceed to checkout. Your cart is persisted in browser storage so items remain even after closing the browser.
+
+<Warning>
+You must be logged in to access cart functionality. Unauthenticated users will be redirected to the login page.
+</Warning>
+
+## Adding Items to Cart
+
+### From Product Detail Page
+
+Add products to your cart from the product detail page:
+
+<Steps>
+  <Step title="Navigate to Product">
+    Click on any product from the catalog or featured section to view its details
+  </Step>
+
+  <Step title="Verify Authentication">
+    Ensure you're logged in. If not, you'll see:
+    - Message: **"Inicia sesión para comprar este producto"**
+    - Button: **"Iniciar Sesión para Comprar"**
+  </Step>
+
+  <Step title="Check Stock Availability">
+    Verify the product is in stock:
+    - **Available**: Shows stock count (e.g., "5 unidades")
+    - **Out of Stock**: Shows **"Agotado"** in red - cannot be added
+  </Step>
+
+  <Step title="Select Quantity">
+    Use the quantity input field to choose how many items to add:
+    - **Minimum**: 1 unit
+    - **Maximum**: Up to available stock
+    - Controlled by a number input spinner
+  </Step>
+
+  <Step title="Add to Cart">
+    Click the **"Añadir al Carrito"** button:
+    - Button text changes to **"¡Añadido!"** briefly
+    - Product is added to your cart with the specified quantity
+  </Step>
+</Steps>
+
+### Cart Context and Persistence
+
+The cart uses React Context for state management with these features:
+
+- **localStorage Persistence**: Cart data is saved to browser storage
+- **Auto-sync**: Changes sync automatically between browser tabs
+- **Session Recovery**: Cart contents persist across browser sessions
+
+<Note>
+If you add a product that's already in your cart, the quantities are combined rather than creating duplicate entries.
+</Note>
+
+## Viewing Your Cart
+
+Access your cart from the navigation menu:
+
+<Steps>
+  <Step title="Open Cart Page">
+    Click on the **Cart** icon or link in the main navigation
+  </Step>
+
+  <Step title="Authentication Check">
+    If not logged in, you'll be automatically redirected to `/login`
+  </Step>
+
+  <Step title="View Cart Contents">
+    The cart page displays:
+    - List of all items in your cart
+    - Product images and names
+    - Category labels
+    - Individual item prices
+    - Quantity controls
+    - Line totals (price × quantity)
+  </Step>
+</Steps>
+
+### Empty Cart State
+
+If your cart is empty, you'll see:
+
+- Message: **"Tu carrito está vacío"**
+- Button: **"Ver Productos"** - redirects to the product catalog
+
+## Managing Cart Contents
+
+### Updating Quantities
+
+Adjust the quantity of items already in your cart:
+
+<Steps>
+  <Step title="Locate Quantity Controls">
+    Each cart item has **+** and **-** buttons with the current quantity displayed between them
+  </Step>
+
+  <Step title="Increase Quantity">
+    Click the **+** button to add one more unit
+  </Step>
+
+  <Step title="Decrease Quantity">
+    Click the **-** button to remove one unit:
+    - If quantity reaches 0, the item is removed from the cart
+  </Step>
+
+  <Step title="View Updated Total">
+    The line total and cart total update automatically
+  </Step>
+</Steps>
+
+<Warning>
+The system does not enforce stock limits when updating cart quantities. Ensure you don't exceed available stock to avoid issues during checkout.
+</Warning>
+
+### Removing Items
+
+Delete individual items from your cart:
+
+<Steps>
+  <Step title="Click Remove Button">
+    Each cart item has an **"Eliminar"** button
+  </Step>
+
+  <Step title="Confirm Removal">
+    A confirmation dialog appears: **"¿Seguro que quieres eliminar este producto?"**
+  </Step>
+
+  <Step title="Confirm or Cancel">
+    - Click **OK** to remove the item
+    - Click **Cancel** to keep the item
+  </Step>
+</Steps>
+
+### Clearing the Entire Cart
+
+The cart is automatically cleared when you complete checkout. You can also manually clear it by:
+
+- Removing items one by one
+- Completing the checkout process
+
+## Order Summary
+
+The cart page includes a **"Resumen del Pedido"** (Order Summary) panel on the right side:
+
+### Summary Components
+
+<Card title="Subtotal" icon="calculator">
+  Sum of all item prices × quantities before shipping and taxes
+</Card>
+
+<Card title="Envío" icon="truck">
+  Shipping cost - currently **"Gratis"** (Free) for all orders
+</Card>
+
+<Card title="Total" icon="euro-sign">
+  Final amount to be charged, displayed prominently in euros (€)
+</Card>
+
+### Price Calculations
+
+The cart automatically calculates:
+
+```typescript
+// Line total per item
+lineTotal = productPrice × quantity
+
+// Cart subtotal
+subtotal = sum of all line totals
+
+// Total (with free shipping)
+total = subtotal + 0
+```
+
+<Note>
+All prices are formatted with two decimal places and displayed in euros (€).
+</Note>
+
+## Checkout Process
+
+### Completing Your Purchase
+
+Finalize your order from the cart page:
+
+<Steps>
+  <Step title="Review Cart Contents">
+    Verify all items, quantities, and prices are correct
+  </Step>
+
+  <Step title="Check Order Summary">
+    Review the subtotal, shipping (free), and total amount
+  </Step>
+
+  <Step title="Click Checkout Button">
+    Click **"Tramitar Pedido"** at the bottom of the order summary
+  </Step>
+
+  <Step title="Order Confirmation">
+    A mock confirmation appears: **"¡Gracias por tu compra! (Funcionalidad de pago mock)"**
+  </Step>
+
+  <Step title="Cart Cleared">
+    Your cart is automatically emptied after checkout
+  </Step>
+
+  <Step title="Redirect to Homepage">
+    You're redirected to the homepage (`/`)
+  </Step>
+</Steps>
+
+<Warning>
+The current checkout is a **mock implementation**. In production, this would integrate with a payment gateway and create actual orders in the system.
+</Warning>
+
+## Stock Validation
+
+### Client-Side Validation
+
+The product detail page enforces stock limits:
+
+- Quantity input has `max` attribute set to available stock
+- Cannot select quantity higher than `producto.stock`
+
+### Out of Stock Products
+
+When viewing a product with `stock: 0`:
+
+- **"Agotado"** message displayed in red
+- Quantity selector is hidden
+- **"Añadir al Carrito"** button is hidden
+- Only login redirect shown (if not authenticated)
+
+<Note>
+Stock validation currently happens client-side. The backend should also validate stock availability when orders are processed.
+</Note>
+
+## Cart State Management
+
+The CartContext provides these functions:
+
+### Available Functions
+
+| Function | Description | Parameters |
+|----------|-------------|------------|
+| `addToCart` | Add product to cart or increase quantity | `product: Producto, quantity: number` |
+| `removeFromCart` | Remove item completely from cart | `productId: number` |
+| `updateQuantity` | Change quantity of existing item | `productId: number, quantity: number` |
+| `clearCart` | Empty entire cart | None |
+
+### Cart Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `cart` | `CartItem[]` | Array of cart items |
+| `total` | `number` | Total price of all items |
+| `count` | `number` | Total number of items (sum of quantities) |
+
+## Best Practices
+
+<Card title="Verify Stock Before Checkout" icon="check-circle">
+  Always check product detail pages for current stock levels before completing large orders.
+</Card>
+
+<Card title="Save Your Cart" icon="save">
+  Your cart persists in browser storage, but clear browser data will erase it. Complete purchases promptly.
+</Card>
+
+<Card title="Review Before Checkout" icon="eye">
+  Double-check quantities and items in the order summary before clicking "Tramitar Pedido".
+</Card>
+
+<Card title="Authentication Required" icon="lock">
+  Log in before shopping to ensure seamless cart access and checkout.
+</Card>
+
+## Troubleshooting
+
+### Cart Not Persisting
+
+**Problem**: Cart empties when closing browser
+
+**Solution**: Check browser settings - localStorage must be enabled
+
+### Cannot Add to Cart
+
+**Problem**: Add to cart button not working
+
+**Solutions**:
+- Verify you're logged in
+- Check product has available stock
+- Ensure quantity is within stock limits
+
+### Redirect to Login
+
+**Problem**: Automatically redirected when accessing cart
+
+**Solution**: This is expected behavior - log in to access cart functionality
+
+## Related Guides
+
+- [Shopping Guide](/user-guides/shopping) - Browse and search products
+- [Order Management](/user-guides/order-management) - View order history and status
+- [Admin Panel](/user-guides/admin-panel) - Admin order management

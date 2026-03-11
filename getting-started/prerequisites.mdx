@@ -1,0 +1,170 @@
+---
+title: 'Prerequisites'
+description: 'System requirements and tools needed to run Iquea Commerce'
+---
+
+Before you begin installing Iquea Commerce, ensure your development environment meets the following requirements.
+
+## Required Software
+
+### Java Development Kit (JDK) 21
+
+The backend requires **Java 21 (LTS)** as specified in the project's `pom.xml`.
+
+**Download:** [Eclipse Temurin JDK 21](https://adoptium.net/temurin/releases/?version=21)
+
+**Verify installation:**
+
+```bash
+java -version
+```
+
+You should see output similar to:
+
+```
+openjdk version "21.0.x" 2024-xx-xx LTS
+OpenJDK Runtime Environment Temurin-21.0.x
+OpenJDK 64-Bit Server VM Temurin-21.0.x
+```
+
+<Note>
+  Java 21 is a Long-Term Support (LTS) release recommended for production use. The project uses Spring Boot 3.4.0, which requires Java 17 or higher.
+</Note>
+
+---
+
+### Node.js 18 or Higher
+
+The frontend is built with React 19 and Vite 7, requiring **Node.js 18.0 or higher**.
+
+**Download:** [Node.js Official Website](https://nodejs.org/)
+
+**Verify installation:**
+
+```bash
+node -v
+npm -v
+```
+
+Expected output:
+
+```
+v18.x.x (or higher)
+9.x.x (or higher)
+```
+
+<Warning>
+  Use an **even-numbered** Node.js version (18, 20, 22) for better stability. Odd-numbered versions are not LTS releases.
+</Warning>
+
+---
+
+### MySQL Server 8.0+
+
+The application uses **MySQL 8.0 or higher** for data persistence.
+
+**Download:** [MySQL Community Server](https://dev.mysql.com/downloads/mysql/)
+
+**Verify installation:**
+
+```bash
+mysql --version
+```
+
+Expected output:
+
+```
+mysql  Ver 8.0.x for Linux on x86_64 (MySQL Community Server - GPL)
+```
+
+**Test MySQL connection:**
+
+```bash
+mysql -u root -p
+```
+
+<Note>
+  Make sure the MySQL service is running before proceeding with the installation. The application will connect to `localhost:3306` by default.
+</Note>
+
+---
+
+### Git (Optional)
+
+Required only if you're cloning the repository from version control.
+
+**Download:** [Git Official Website](https://git-scm.com/downloads)
+
+**Verify installation:**
+
+```bash
+git --version
+```
+
+---
+
+## Additional Tools (Optional)
+
+### Maven
+
+The project includes a **Maven Wrapper** (`mvnw`), so you don't need to install Maven separately. However, if you prefer using a global Maven installation:
+
+**Download:** [Apache Maven](https://maven.apache.org/download.cgi)
+
+**Verify installation:**
+
+```bash
+mvn -v
+```
+
+---
+
+### IDE Recommendations
+
+**For Backend (Java):**
+- [IntelliJ IDEA](https://www.jetbrains.com/idea/) (Recommended)
+- [Eclipse](https://www.eclipse.org/downloads/)
+- [VS Code](https://code.visualstudio.com/) with Java extensions
+
+<Note>
+  If using IntelliJ IDEA or Eclipse, make sure to install the **Lombok plugin** to avoid compilation errors. The project uses Lombok for reducing boilerplate code.
+</Note>
+
+**For Frontend (React/TypeScript):**
+- [VS Code](https://code.visualstudio.com/) (Recommended)
+- [WebStorm](https://www.jetbrains.com/webstorm/)
+
+---
+
+## System Requirements
+
+### Minimum Hardware
+
+| Component | Requirement |
+|-----------|-------------|
+| **CPU** | Dual-core processor (2.0 GHz or higher) |
+| **RAM** | 4 GB (8 GB recommended) |
+| **Disk Space** | 2 GB free space |
+| **OS** | Windows 10+, macOS 10.15+, or Linux (Ubuntu 20.04+) |
+
+---
+
+## Port Requirements
+
+Ensure the following ports are available on your system:
+
+| Service | Port | Purpose |
+|---------|------|----------|
+| **Backend API** | 8080 | Spring Boot application server |
+| **Frontend Dev Server** | 5173 | Vite development server |
+| **MySQL Database** | 3306 | MySQL database connection |
+
+<Warning>
+  If any of these ports are already in use, you'll need to modify the configuration files or stop the conflicting services.
+</Warning>
+
+---
+
+## Next Steps
+
+Once you have all prerequisites installed, proceed to the [Installation](/getting-started/installation) guide.

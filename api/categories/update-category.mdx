@@ -1,0 +1,122 @@
+---
+title: "Update Category"
+api: "PUT /api/categorias/{nombre}"
+description: "Update an existing product category"
+---
+
+## Authentication
+
+**Admin only** - This endpoint requires admin authentication.
+
+Include an Authorization header with a valid admin bearer token:
+
+```
+Authorization: Bearer YOUR_ADMIN_TOKEN
+```
+
+## Path Parameters
+
+<ParamField path="nombre" type="string" required>
+  The current name of the category to update
+</ParamField>
+
+## Request Body
+
+<ParamField body="nombre" type="string" required>
+  The new name for the category
+</ParamField>
+
+<ParamField body="slug" type="string" required>
+  The new URL-friendly identifier for the category
+</ParamField>
+
+## Request Example
+
+```json
+{
+  "nombre": "Consumer Electronics",
+  "slug": "consumer-electronics"
+}
+```
+
+## Response
+
+Returns the updated category object.
+
+<ResponseField name="categoria_id" type="long">
+  Unique identifier for the category
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  Updated category name
+</ResponseField>
+
+<ResponseField name="slug" type="string">
+  Updated URL-friendly category identifier
+</ResponseField>
+
+<ResponseField name="productos" type="array">
+  List of products in this category
+  <Expandable title="Product Summary">
+    <ResponseField name="producto_id" type="long">
+      Product identifier
+    </ResponseField>
+    <ResponseField name="nombre" type="string">
+      Product name
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Response Example
+
+```json
+{
+  "categoria_id": 1,
+  "nombre": "Consumer Electronics",
+  "slug": "consumer-electronics",
+  "productos": [
+    {
+      "producto_id": 101,
+      "nombre": "Laptop"
+    },
+    {
+      "producto_id": 102,
+      "nombre": "Smartphone"
+    }
+  ]
+}
+```
+
+## cURL Example
+
+```bash
+curl -X PUT https://api.iquea.com/api/categorias/Electronics \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -d '{
+    "nombre": "Consumer Electronics",
+    "slug": "consumer-electronics"
+  }'
+```
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Category successfully updated
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid authentication token
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  User does not have admin permissions
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Category with the specified name does not exist
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Invalid request body or missing required fields
+</ResponseField>

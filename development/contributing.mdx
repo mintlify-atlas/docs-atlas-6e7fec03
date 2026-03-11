@@ -1,0 +1,302 @@
+---
+title: Contributing Guide
+description: Learn how to contribute to Iquea Commerce, set up your development environment, and submit pull requests
+---
+
+## Welcome Contributors
+
+Thank you for your interest in contributing to Iquea Commerce! This guide will help you get started with the contribution process, from forking the repository to submitting your first pull request.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Java Development Kit (JDK) 21** - [Download JDK 21](https://adoptium.net/temurin/releases/?version=21)
+- **Node.js 18.0 or higher** - [Download Node.js](https://nodejs.org/)
+- **MySQL Server 8.0+** - [Download MySQL](https://dev.mysql.com/downloads/installer/)
+- **Git** - [Download Git](https://git-scm.com/)
+
+## Getting Started
+
+<Steps>
+  <Step title="Fork the Repository">
+    Visit the [Iquea Commerce repository](https://github.com/your-org/iquea-commerce) and click the **Fork** button in the top-right corner to create your own copy.
+  </Step>
+
+  <Step title="Clone Your Fork">
+    Clone the forked repository to your local machine:
+
+    ```bash
+    git clone https://github.com/your-username/iquea-commerce.git
+    cd iquea-commerce
+    ```
+  </Step>
+
+  <Step title="Add Upstream Remote">
+    Add the original repository as an upstream remote to keep your fork synchronized:
+
+    ```bash
+    git remote add upstream https://github.com/original-org/iquea-commerce.git
+    git remote -v
+    ```
+  </Step>
+
+  <Step title="Set Up the Database">
+    Create the MySQL database:
+
+    ```sql
+    CREATE DATABASE IF NOT EXISTS apiIquea CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    ```
+
+    Configure database credentials using environment variables:
+
+    ```bash
+    export DB_USERNAME=root
+    export DB_PASSWORD=your_password
+    ```
+  </Step>
+
+  <Step title="Set Up the Backend">
+    Navigate to the backend directory and start the server:
+
+    ```bash
+    cd Iqüea_back
+    ./mvnw spring-boot:run
+    ```
+
+    The backend will be available at `http://localhost:8080`
+  </Step>
+
+  <Step title="Set Up the Frontend">
+    In a new terminal, navigate to the frontend directory:
+
+    ```bash
+    cd Iquea_front
+    npm install
+    npm run dev
+    ```
+
+    The frontend will be available at `http://localhost:5173`
+  </Step>
+</Steps>
+
+<Note>
+  On first startup, the backend automatically creates database tables and inserts initial data from `src/main/resources/data.sql`.
+</Note>
+
+## Development Workflow
+
+### Creating a New Branch
+
+Always create a new branch for your changes. Use descriptive branch names following these conventions:
+
+```bash
+# For new features
+git checkout -b feature/add-product-ratings
+
+# For bug fixes
+git checkout -b bugfix/fix-cart-total-calculation
+
+# For documentation
+git checkout -b docs/update-api-reference
+
+# For refactoring
+git checkout -b refactor/optimize-product-queries
+```
+
+### Branch Naming Conventions
+
+- `feature/` - New features or enhancements
+- `bugfix/` - Bug fixes
+- `hotfix/` - Urgent production fixes
+- `docs/` - Documentation changes
+- `refactor/` - Code refactoring
+- `test/` - Adding or updating tests
+- `chore/` - Maintenance tasks
+
+### Making Changes
+
+<Steps>
+  <Step title="Keep Your Branch Updated">
+    Regularly sync your branch with the upstream repository:
+
+    ```bash
+    git fetch upstream
+    git rebase upstream/main
+    ```
+  </Step>
+
+  <Step title="Make Your Changes">
+    Write clean, well-documented code following our [code style guidelines](/development/code-style).
+  </Step>
+
+  <Step title="Test Your Changes">
+    Ensure all tests pass before committing:
+
+    ```bash
+    # Backend tests
+    cd Iqüea_back
+    ./mvnw test
+
+    # Frontend tests
+    cd Iquea_front
+    npm test
+    ```
+
+    See the [testing guide](/development/testing) for more details.
+  </Step>
+
+  <Step title="Commit Your Changes">
+    Write clear, descriptive commit messages:
+
+    ```bash
+    git add .
+    git commit -m "Add product rating system
+
+    - Add Rating entity and repository
+    - Implement rating service with validation
+    - Create REST endpoints for rating CRUD
+    - Add frontend rating component"
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  Follow the [Conventional Commits](https://www.conventionalcommits.org/) specification for commit messages:
+  - `feat:` for new features
+  - `fix:` for bug fixes
+  - `docs:` for documentation
+  - `refactor:` for code refactoring
+  - `test:` for adding tests
+</Tip>
+
+## Submitting a Pull Request
+
+<Steps>
+  <Step title="Push Your Changes">
+    Push your branch to your fork:
+
+    ```bash
+    git push origin feature/add-product-ratings
+    ```
+  </Step>
+
+  <Step title="Create the Pull Request">
+    Go to the original repository on GitHub and click **New Pull Request**. Select your fork and branch, then fill in the PR template:
+
+    **Title:** Brief description of changes
+
+    **Description:**
+    - What changes were made?
+    - Why were they made?
+    - What testing was performed?
+    - Any breaking changes or migrations needed?
+  </Step>
+
+  <Step title="Address Review Feedback">
+    Respond to reviewer comments and make requested changes:
+
+    ```bash
+    # Make changes based on feedback
+    git add .
+    git commit -m "Address PR feedback: improve validation"
+    git push origin feature/add-product-ratings
+    ```
+  </Step>
+
+  <Step title="Merge">
+    Once approved, a maintainer will merge your PR. You can then delete your branch:
+
+    ```bash
+    git checkout main
+    git pull upstream main
+    git branch -d feature/add-product-ratings
+    git push origin --delete feature/add-product-ratings
+    ```
+  </Step>
+</Steps>
+
+## Pull Request Checklist
+
+Before submitting your PR, ensure:
+
+- [ ] Code follows the project's [style guidelines](/development/code-style)
+- [ ] All tests pass (`./mvnw test` and `npm test`)
+- [ ] New features include appropriate tests
+- [ ] Documentation is updated if needed
+- [ ] Commit messages are clear and descriptive
+- [ ] No merge conflicts with main branch
+- [ ] PR description clearly explains the changes
+
+## Code Review Process
+
+1. **Automated Checks**: CI/CD pipeline runs tests and linters
+2. **Peer Review**: At least one maintainer reviews the code
+3. **Feedback**: Reviewers may request changes or improvements
+4. **Approval**: Once approved, the PR is ready to merge
+5. **Merge**: Maintainers merge using squash or merge commits
+
+## Types of Contributions
+
+### Bug Reports
+
+Found a bug? [Create an issue](https://github.com/your-org/iquea-commerce/issues/new) with:
+- Clear title and description
+- Steps to reproduce
+- Expected vs actual behavior
+- Environment details (OS, Java version, browser)
+- Screenshots if applicable
+
+### Feature Requests
+
+Have an idea? [Open a discussion](https://github.com/your-org/iquea-commerce/discussions) with:
+- Use case and motivation
+- Proposed solution
+- Alternatives considered
+- Potential impacts
+
+### Documentation
+
+Improve docs by:
+- Fixing typos or unclear explanations
+- Adding code examples
+- Translating to other languages
+- Creating tutorials or guides
+
+## Code of Conduct
+
+### Our Standards
+
+We are committed to providing a welcoming and inclusive environment. Expected behaviors:
+
+- **Be Respectful**: Value diverse perspectives and experiences
+- **Be Collaborative**: Help others learn and grow
+- **Be Professional**: Keep discussions focused and constructive
+- **Be Patient**: Remember that everyone started as a beginner
+
+### Unacceptable Behavior
+
+- Harassment, discrimination, or personal attacks
+- Trolling, insulting comments, or political arguments
+- Publishing others' private information
+- Any conduct that creates an unsafe environment
+
+### Reporting Issues
+
+If you experience or witness unacceptable behavior, report it to the project maintainers at [conduct@iquea.com](mailto:conduct@iquea.com).
+
+## Getting Help
+
+- **Documentation**: Start with our [developer guides](/introduction)
+- **Discussions**: Ask questions in [GitHub Discussions](https://github.com/your-org/iquea-commerce/discussions)
+- **Discord**: Join our [community Discord](https://discord.gg/iquea) for real-time help
+- **Email**: Contact maintainers at [dev@iquea.com](mailto:dev@iquea.com)
+
+## Recognition
+
+Contributors are recognized in:
+- Project README contributors section
+- Release notes for significant contributions
+- Annual contributor spotlight posts
+
+Thank you for contributing to Iquea Commerce! 🎉

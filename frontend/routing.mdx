@@ -1,0 +1,363 @@
+---
+title: React Router Setup
+description: Client-side routing configuration in Iquea Commerce
+---
+
+# React Router Setup
+
+The Iquea frontend uses React Router v7 for client-side navigation, providing a seamless single-page application experience.
+
+## Router Configuration
+
+The main routing setup is defined in `App.tsx`:
+
+```typescript src/App.tsx
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ProductList from './pages/ProductList';
+import ProductDetail from './pages/ProductDetail';
+import Cart from './pages/Cart';
+import Habitaciones from './pages/Habitaciones';
+import Nosotros from './pages/Nosotros';
+import Contacto from './pages/Contacto';
+import './App.css';
+
+function App() {
+  return (
+    <AuthProvider>
+      <CartProvider>
+        <BrowserRouter>
+          <div className="app-container">
+            <Navbar />
+            <main className="main-content">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/productos" element={<ProductList />} />
+                <Route path="/productos/:id" element={<ProductDetail />} />
+                <Route path="/carrito" element={<Cart />} />
+                <Route path="/habitaciones" element={<Habitaciones />} />
+                <Route path="/nosotros" element={<Nosotros />} />
+                <Route path="/contacto" element={<Contacto />} />
+              </Routes>
+            </main>
+            <Footer />
+          </div>
+        </BrowserRouter>
+      </CartProvider>
+    </AuthProvider>
+  );
+}
+
+export default App;
+```
+
+## Route Structure
+
+The application defines 9 main routes:
+
+<CardGroup cols={2}>
+  <Card title="Home" icon="house">
+    `/` - Landing page with featured products
+  </Card>
+  <Card title="Login" icon="right-to-bracket">
+    `/login` - User authentication page
+  </Card>
+  <Card title="Register" icon="user-plus">
+    `/register` - New user registration
+  </Card>
+  <Card title="Product List" icon="list">
+    `/productos` - Browse all products
+  </Card>
+  <Card title="Product Detail" icon="magnifying-glass">
+    `/productos/:id` - Individual product view
+  </Card>
+  <Card title="Cart" icon="cart-shopping">
+    `/carrito` - Shopping cart (auth required)
+  </Card>
+  <Card title="Habitaciones" icon="bed">
+    `/habitaciones` - Room inspiration page
+  </Card>
+  <Card title="Nosotros" icon="users">
+    `/nosotros` - About us page
+  </Card>
+  <Card title="Contacto" icon="envelope">
+    `/contacto` - Contact information
+  </Card>
+</CardGroup>
+
+## Route Details
+
+### Public Routes
+
+These routes are accessible to all users:
+
+| Path | Component | Description |
+|------|-----------|-------------|
+| `/` | `Home` | Landing page with hero and featured products |
+| `/login` | `Login` | Authentication form |
+| `/register` | `Register` | User registration form |
+| `/productos` | `ProductList` | Browse products with search and filters |
+| `/productos/:id` | `ProductDetail` | Product details with add-to-cart |
+| `/habitaciones` | `Habitaciones` | Room-based product inspiration |
+| `/nosotros` | `Nosotros` | Company information |
+| `/contacto` | `Contacto` | Contact form and information |
+
+### Protected Routes
+
+Currently, the cart is the only protected route:
+
+| Path | Component | Auth Required |
+|------|-----------|---------------|
+| `/carrito` | `Cart` | Yes (soft) |
+
+<Note>
+**Soft Protection**: The cart route is accessible but the Navbar only shows the cart icon when `isAuthenticated` is true. There's no explicit route guard in the current implementation.
+</Note>
+
+## Dynamic Routes
+
+### Product Detail Route
+
+The product detail route uses a URL parameter:
+
+```typescript
+<Route path="/productos/:id" element={<ProductDetail />} />
+```
+
+#### Accessing Route Parameters
+
+```typescript src/pages/ProductDetail.tsx
+import { useParams } from 'react-router-dom';
+import { getProducto } from '../api/productos';
+
+function ProductDetail() {
+  const { id } = useParams<{ id: string }>();
+  const [producto, setProducto] = useState<Producto | null>(null);
+
+  useEffect(() => {
+    if (id) {
+      getProducto(Number(id)).then(setProducto);
+    }
+  }, [id]);
+
+  // Render product details...
+}
+```
+
+### Search Query Parameters
+
+The product list supports search via query parameters:
+
+```typescript src/components/Navbar.tsx
+import { useNavigate } from 'react-router-dom';
+
+function Navbar() {
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // Navigate with query parameter
+      navigate(`/productos?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+    }
+  }
+  // ...
+}
+```
+
+## Navigation
+
+The application uses two main navigation methods:
+
+### Declarative Navigation
+
+Using the `Link` component for standard navigation:
+
+```typescript
+import { Link } from 'react-router-dom';
+
+<Link to="/productos" className="navbar__link">
+  Productos
+</Link>
+
+<Link to={`/productos/${producto.producto_id}`}>
+  View Product
+</Link>
+```
+
+### Programmatic Navigation
+
+Using the `useNavigate` hook for navigation after actions:
+
+```typescript
+import { useNavigate } from 'react-router-dom';
+
+function Navbar() {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  function handleLogout() {
+    logout();
+    navigate('/');  // Redirect to home after logout
+  }
+}
+```
+
+## Layout Structure
+
+The routing hierarchy wraps all routes with context providers and shared layout:
+
+```
+AuthProvider
+└── CartProvider
+    └── BrowserRouter
+        └── App Container
+            ├── Navbar (persistent)
+            ├── <Routes>
+            │   └── [Dynamic page content]
+            └── Footer (persistent)
+```
+
+This ensures:
+- **Persistent UI** - Navbar and Footer render on all pages
+- **Context availability** - Auth and Cart state available to all routes
+- **Smooth transitions** - Only the main content area changes between routes
+
+## Route Protection (Future Enhancement)
+
+While the current implementation doesn't have explicit route guards, here's how you could add them:
+
+<Tabs>
+  <Tab title="Protected Route Component">
+    ```typescript src/components/ProtectedRoute.tsx
+    import { Navigate } from 'react-router-dom';
+    import { useAuth } from '../context/AuthContext';
+    
+    interface Props {
+      children: React.ReactNode;
+    }
+    
+    export default function ProtectedRoute({ children }: Props) {
+      const { isAuthenticated } = useAuth();
+    
+      if (!isAuthenticated) {
+        return <Navigate to="/login" replace />;
+      }
+    
+      return <>{children}</>;
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Usage in App.tsx">
+    ```typescript src/App.tsx
+    import ProtectedRoute from './components/ProtectedRoute';
+    
+    function App() {
+      return (
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          
+          {/* Protected routes */}
+          <Route
+            path="/carrito"
+            element={
+              <ProtectedRoute>
+                <Cart />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      );
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Authentication Flow
+
+The authentication flow uses programmatic navigation:
+
+1. **Login Success** → Navigate to home or intended page
+2. **Logout** → Navigate to home
+3. **Unauthorized Access** → Navigate to login (if implementing route guards)
+
+```typescript src/pages/Login.tsx
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { login } from '../api/auth';
+
+function Login() {
+  const navigate = useNavigate();
+  const { setToken } = useAuth();
+
+  async function handleSubmit(credentials: LoginDTO) {
+    try {
+      const { token } = await login(credentials);
+      setToken(token);
+      navigate('/');  // Redirect after successful login
+    } catch (error) {
+      // Handle error
+    }
+  }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Link for Navigation">
+    Prefer `<Link>` over `<a>` tags to prevent full page reloads:
+    ```typescript
+    // Good
+    <Link to="/productos">Products</Link>
+    
+    // Bad - causes full page reload
+    <a href="/productos">Products</a>
+    ```
+  </Accordion>
+
+  <Accordion title="URL Parameter Validation">
+    Always validate and convert URL parameters:
+    ```typescript
+    const { id } = useParams<{ id: string }>();
+    const productId = Number(id);
+    
+    if (isNaN(productId)) {
+      // Handle invalid ID
+      return <NotFound />;
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Query Parameter Encoding">
+    Always encode query parameters:
+    ```typescript
+    const encodedQuery = encodeURIComponent(searchQuery.trim());
+    navigate(`/productos?q=${encodedQuery}`);
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="State Management" icon="database" href="./state-management">
+    Learn how AuthContext and CartContext work
+  </Card>
+  <Card title="API Integration" icon="plug" href="./api-integration">
+    See how pages fetch data from the backend
+  </Card>
+</CardGroup>

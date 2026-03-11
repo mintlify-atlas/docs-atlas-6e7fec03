@@ -1,0 +1,116 @@
+---
+title: "Get Order by ID"
+api: "GET /api/pedidos/{id}"
+---
+
+Retrieves a specific order by its reference ID.
+
+## Authentication
+
+Requires JWT token in the Authorization header.
+
+```bash
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | Long | Yes | Order reference ID |
+
+## Response
+
+Returns a single order object with complete details including line items.
+
+### Response Body
+
+```json
+{
+  "pedido_id": 1,
+  "referencia": "ORD-2026-001",
+  "usuario": {
+    "usuario_id": 5,
+    "username": "john_doe",
+    "email": {
+      "address": "john@example.com"
+    }
+  },
+  "fechaPedido": "2026-03-11T10:30:00",
+  "estado": "PAGADO",
+  "detalles": [
+    {
+      "detalle_id": 1,
+      "producto": {
+        "producto_id": 10,
+        "nombre": "BILLY Bookcase",
+        "precioCantidad": 49.99,
+        "precioMoneda": "USD",
+        "es_destacado": false
+      },
+      "cantidad": 2,
+      "precioUnitario": 49.99,
+      "subtotal": 99.98
+    },
+    {
+      "detalle_id": 2,
+      "producto": {
+        "producto_id": 15,
+        "nombre": "MALM Dresser",
+        "precioCantidad": 129.99,
+        "precioMoneda": "USD",
+        "es_destacado": true
+      },
+      "cantidad": 1,
+      "precioUnitario": 129.99,
+      "subtotal": 129.99
+    }
+  ],
+  "total": 229.97
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `pedido_id` | Long | Unique order identifier |
+| `referencia` | String | Auto-generated order reference number |
+| `usuario` | Object | User who placed the order |
+| `usuario.usuario_id` | Long | User ID |
+| `usuario.username` | String | Username |
+| `usuario.email.address` | String | User email address |
+| `fechaPedido` | DateTime | Order creation timestamp |
+| `estado` | String | Order status (see EstadoPedido values) |
+| `detalles` | Array | Array of order line items |
+| `detalles[].detalle_id` | Long | Line item ID |
+| `detalles[].producto` | Object | Product details |
+| `detalles[].cantidad` | Integer | Quantity ordered |
+| `detalles[].precioUnitario` | BigDecimal | Unit price at time of order |
+| `detalles[].subtotal` | BigDecimal | Line item subtotal |
+| `total` | BigDecimal | Total order amount |
+
+### EstadoPedido Values
+
+- `PENDIENTE` - Order pending
+- `PAGADO` - Order paid
+- `ENVIADO` - Order shipped
+- `ENTREGADO` - Order delivered
+- `CANCELADO` - Order cancelled
+
+## Example Request
+
+```bash
+curl -X GET "https://api.iquea.com/api/pedidos/1" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200 | Success - Returns order object |
+| 401 | Unauthorized - Invalid or missing token |
+| 404 | Order not found |
+| 500 | Internal server error |

@@ -1,0 +1,243 @@
+---
+title: Frontend Deployment
+description: Deploy the React frontend application to production
+---
+
+This guide covers deploying the Iquea Commerce frontend application built with React, TypeScript, and Vite.
+
+## Building the Application
+
+The frontend uses Vite as the build tool and outputs production-ready files to the `dist/` folder.
+
+<Steps>
+  <Step title="Install dependencies">
+    Navigate to the frontend directory and install all required packages:
+    
+    ```bash
+    cd Iquea_front
+    npm install
+    ```
+  </Step>
+
+  <Step title="Build for production">
+    Run the build command to create optimized production assets:
+    
+    ```bash
+    npm run build
+    ```
+    
+    This command:
+    - Compiles TypeScript to JavaScript (`tsc -b`)
+    - Bundles and optimizes assets with Vite
+    - Minifies JavaScript and CSS
+    - Outputs static files to the `dist/` directory
+  </Step>
+
+  <Step title="Preview the build (optional)">
+    Test the production build locally before deploying:
+    
+    ```bash
+    npm run preview
+    ```
+  </Step>
+</Steps>
+
+## Environment Variables
+
+<Warning>
+  The API base URL is currently hardcoded in `src/api/client.ts`. You must update this before deploying to production.
+</Warning>
+
+### Configuring the API URL
+
+For production deployments, update the `BASE_URL` constant in `src/api/client.ts`:
+
+```typescript
+// Development
+const BASE_URL = 'http://localhost:8080/api';
+
+// Production
+const BASE_URL = 'https://your-api-domain.com/api';
+```
+
+**Recommended approach:** Use Vite environment variables for better configuration management:
+
+1. Create a `.env.production` file:
+   ```bash
+   VITE_API_URL=https://your-api-domain.com/api
+   ```
+
+2. Update `src/api/client.ts`:
+   ```typescript
+   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+   ```
+
+3. Rebuild the application:
+   ```bash
+   npm run build
+   ```
+
+## Deployment Options
+
+The built application in the `dist/` folder contains static files that can be deployed to any static hosting service.
+
+### Vercel
+
+<Steps>
+  <Step title="Install Vercel CLI">
+    ```bash
+    npm install -g vercel
+    ```
+  </Step>
+
+  <Step title="Deploy">
+    From the `Iquea_front` directory:
+    ```bash
+    vercel --prod
+    ```
+    
+    Or connect your GitHub repository in the Vercel dashboard for automatic deployments.
+  </Step>
+
+  <Step title="Configure environment variables">
+    In the Vercel dashboard, add your environment variables:
+    - `VITE_API_URL`: Your production API URL
+  </Step>
+</Steps>
+
+### Netlify
+
+<Steps>
+  <Step title="Install Netlify CLI">
+    ```bash
+    npm install -g netlify-cli
+    ```
+  </Step>
+
+  <Step title="Deploy">
+    ```bash
+    netlify deploy --prod --dir=dist
+    ```
+  </Step>
+
+  <Step title="Configure build settings">
+    In `netlify.toml` (create if it doesn't exist):
+    ```toml
+    [build]
+      command = "npm run build"
+      publish = "dist"
+    
+    [[redirects]]
+      from = "/*"
+      to = "/index.html"
+      status = 200
+    ```
+  </Step>
+</Steps>
+
+### Static Hosting (Nginx, Apache, S3)
+
+For traditional web servers or cloud storage:
+
+1. Build the application:
+   ```bash
+   npm run build
+   ```
+
+2. Upload the contents of the `dist/` folder to your web server
+
+3. Configure your server to:
+   - Serve `index.html` for all routes (for React Router)
+   - Enable gzip/brotli compression
+   - Set appropriate cache headers
+
+#### Nginx Configuration Example
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+    root /var/www/iquea-frontend/dist;
+    index index.html;
+
+    # Enable gzip compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+    # React Router support
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+```
+
+## Production Optimizations
+
+### Build Size Optimization
+
+Vite automatically performs several optimizations:
+- Code splitting for better caching
+- Tree shaking to remove unused code
+- Minification of JavaScript and CSS
+- Asset optimization
+
+### Performance Best Practices
+
+1. **Enable compression** - Configure your hosting provider to serve gzip or brotli compressed assets
+
+2. **Configure CDN** - Use a CDN for faster global delivery:
+   - Cloudflare
+   - AWS CloudFront
+   - Google Cloud CDN
+
+3. **Set cache headers** - Configure long cache times for static assets:
+   ```
+   Cache-Control: public, max-age=31536000, immutable
+   ```
+
+4. **Enable HTTP/2** - Ensure your hosting supports HTTP/2 for better performance
+
+5. **HTTPS** - Always use HTTPS in production:
+   - Required for secure authentication
+   - Improves SEO
+   - Enables modern web features
+
+<Warning>
+  Ensure CORS is properly configured on your backend API to allow requests from your frontend domain.
+</Warning>
+
+## Verifying the Deployment
+
+After deployment, verify:
+
+1. All pages load correctly
+2. API calls connect to the production backend
+3. Authentication flow works properly
+4. Images and assets load correctly
+5. React Router navigation works on all routes
+6. Console shows no errors
+
+## Troubleshooting
+
+### Blank Page After Deployment
+
+- Check browser console for errors
+- Verify the API URL is correct
+- Ensure server is configured to serve `index.html` for all routes
+
+### API Connection Failures
+
+- Verify CORS configuration on the backend
+- Check that the API URL in environment variables is correct
+- Ensure HTTPS is used if the frontend is on HTTPS
+
+### 404 Errors on Page Refresh
+
+- Configure your server to redirect all routes to `index.html`
+- See server configuration examples above

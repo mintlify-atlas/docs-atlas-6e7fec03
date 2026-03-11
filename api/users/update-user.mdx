@@ -1,0 +1,204 @@
+---
+title: "Update User"
+api: "PUT /api/usuarios/{username}"
+description: "Update an existing user's information"
+---
+
+## Authentication
+
+**Required:** Authenticated user (own account) or Admin
+
+Users can update their own account information. Administrators can update any user's information.
+
+## Path Parameters
+
+<ParamField path="username" type="string" required>
+  The username of the user to update
+</ParamField>
+
+## Request Body
+
+<ParamField body="username" type="string" required>
+  User's unique username (max 100 characters)
+</ParamField>
+
+<ParamField body="email" type="object" required>
+  User's email address. Must be unique across the system.
+  
+  ```json
+  {
+    "value": "user@example.com"
+  }
+  ```
+</ParamField>
+
+<ParamField body="nombre" type="string" required>
+  User's first name (max 100 characters)
+</ParamField>
+
+<ParamField body="apellidos" type="string" required>
+  User's last name(s) (max 150 characters)
+</ParamField>
+
+<ParamField body="direccion_envio" type="string" required>
+  User's shipping address
+</ParamField>
+
+<ParamField body="fecha_nacimiento" type="date" required>
+  User's date of birth in ISO 8601 format (YYYY-MM-DD)
+</ParamField>
+
+<ParamField body="activo" type="boolean" required>
+  Whether the user account is active
+</ParamField>
+
+<ParamField body="password" type="string" optional>
+  User's password. Only include if changing the password. Will be securely hashed before storage.
+</ParamField>
+
+<ParamField body="rol" type="enum" required>
+  User role. Possible values:
+  - `ADMIN` - Administrator with full access
+  - `CLIENTE` - Regular customer (default)
+  
+  <Warning>Only administrators can change user roles</Warning>
+</ParamField>
+
+## Request
+
+```bash
+curl -X PUT https://api.iquea.com/api/usuarios/johndoe \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "johndoe",
+    "email": {
+      "value": "john.doe@example.com"
+    },
+    "nombre": "John",
+    "apellidos": "Doe Smith",
+    "direccion_envio": "456 New Address, Madrid, Spain",
+    "fecha_nacimiento": "1990-05-15",
+    "activo": true,
+    "rol": "CLIENTE"
+  }'
+```
+
+### Example Request Body
+
+```json
+{
+  "username": "johndoe",
+  "email": {
+    "value": "john.doe@example.com"
+  },
+  "nombre": "John",
+  "apellidos": "Doe Smith",
+  "direccion_envio": "456 New Address, Madrid, Spain",
+  "fecha_nacimiento": "1990-05-15",
+  "activo": true,
+  "rol": "CLIENTE"
+}
+```
+
+## Response
+
+Returns the updated user object.
+
+<ResponseField name="usuario_id" type="long">
+  Unique identifier for the user
+</ResponseField>
+
+<ResponseField name="username" type="string">
+  User's unique username (max 100 characters)
+</ResponseField>
+
+<ResponseField name="email" type="object">
+  User's email address (unique across the system)
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  User's first name (max 100 characters)
+</ResponseField>
+
+<ResponseField name="apellidos" type="string">
+  User's last name(s) (max 150 characters)
+</ResponseField>
+
+<ResponseField name="rol" type="enum">
+  User role (ADMIN or CLIENTE)
+</ResponseField>
+
+<ResponseField name="direccion_envio" type="string">
+  User's shipping address
+</ResponseField>
+
+<ResponseField name="fecha_nacimiento" type="date">
+  User's date of birth (ISO 8601 format: YYYY-MM-DD)
+</ResponseField>
+
+<ResponseField name="activo" type="boolean">
+  Whether the user account is active
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "usuario_id": 1,
+  "username": "johndoe",
+  "email": {
+    "value": "john.doe@example.com"
+  },
+  "nombre": "John",
+  "apellidos": "Doe Smith",
+  "rol": "CLIENTE",
+  "direccion_envio": "456 New Address, Madrid, Spain",
+  "fecha_nacimiento": "1990-05-15",
+  "activo": true
+}
+```
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  User successfully updated
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Invalid request body or validation errors (e.g., invalid email format, missing required fields)
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid authentication token
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  User attempting to update another user's account without admin privileges, or non-admin trying to change user role
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  User with the specified username does not exist
+</ResponseField>
+
+<ResponseField name="409" type="Conflict">
+  Email address already in use by another user
+</ResponseField>
+
+## Security Notes
+
+<Warning>
+  **Password Security:** When updating a user, passwords are securely hashed before being stored in the database. Passwords are never returned in API responses.
+</Warning>
+
+<Warning>
+  **Role Changes:** Only administrators can modify the `rol` field. Regular users attempting to change their own role or another user's role will receive a 403 Forbidden error.
+</Warning>
+
+<Info>
+  **Access Control:** Users can only update their own account information (identified by their JWT token username). Administrators can update any user's information.
+</Info>
+
+<Tip>
+  **Partial Updates:** To change only the password, include all current user information in the request body with the new password field. To update other fields without changing the password, omit the password field entirely.
+</Tip>

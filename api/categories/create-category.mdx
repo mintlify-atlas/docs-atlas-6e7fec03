@@ -1,0 +1,95 @@
+---
+title: "Create Category"
+api: "POST /api/categorias"
+description: "Create a new product category"
+---
+
+## Authentication
+
+**Admin only** - This endpoint requires admin authentication.
+
+Include an Authorization header with a valid admin bearer token:
+
+```
+Authorization: Bearer YOUR_ADMIN_TOKEN
+```
+
+## Request Body
+
+<ParamField body="nombre" type="string" required>
+  The name of the category
+</ParamField>
+
+<ParamField body="slug" type="string" required>
+  URL-friendly identifier for the category (e.g., "electronics", "home-decor")
+</ParamField>
+
+## Request Example
+
+```json
+{
+  "nombre": "Electronics",
+  "slug": "electronics"
+}
+```
+
+## Response
+
+Returns the newly created category object.
+
+<ResponseField name="categoria_id" type="long">
+  Unique identifier for the newly created category
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  Category name
+</ResponseField>
+
+<ResponseField name="slug" type="string">
+  URL-friendly category identifier
+</ResponseField>
+
+<ResponseField name="productos" type="array">
+  List of products in this category (empty for new categories)
+</ResponseField>
+
+## Response Example
+
+```json
+{
+  "categoria_id": 1,
+  "nombre": "Electronics",
+  "slug": "electronics",
+  "productos": []
+}
+```
+
+## cURL Example
+
+```bash
+curl -X POST https://api.iquea.com/api/categorias \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -d '{
+    "nombre": "Electronics",
+    "slug": "electronics"
+  }'
+```
+
+## Status Codes
+
+<ResponseField name="201" type="Created">
+  Category successfully created
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid authentication token
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  User does not have admin permissions
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Invalid request body or missing required fields
+</ResponseField>

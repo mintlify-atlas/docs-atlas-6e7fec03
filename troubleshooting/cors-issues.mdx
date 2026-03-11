@@ -1,0 +1,452 @@
+---
+title: 'CORS Issues'
+description: 'Resolving Cross-Origin Resource Sharing errors in Iquea Commerce'
+icon: 'shield-halved'
+---
+
+CORS (Cross-Origin Resource Sharing) issues occur when the frontend (running on one origin) tries to make requests to the backend API (running on a different origin). This guide helps you understand and resolve CORS errors.
+
+## Understanding CORS
+
+<Note>
+In development, the frontend runs on `http://localhost:5173` (Vite) and the backend on `http://localhost:8080` (Spring Boot). These are different origins, so CORS must be configured.
+</Note>
+
+## Current CORS Configuration
+
+The application's CORS settings are configured in `SecurityConfig.java:55-68`:
+
+```java
+@Bean
+public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration configuration = new CorsConfiguration();
+    configuration.setAllowedOrigins(Arrays.asList(
+        "http://localhost:5173", 
+        "http://127.0.0.1:5173"
+    ));
+    configuration.setAllowedMethods(Arrays.asList(
+        "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
+    ));
+    configuration.setAllowedHeaders(Arrays.asList(
+        "Authorization", "Content-Type", "X-Requested-With", 
+        "Accept", "Origin", "Access-Control-Request-Method", 
+        "Access-Control-Request-Headers"
+    ));
+    configuration.setExposedHeaders(Arrays.asList("Authorization"));
+    configuration.setAllowCredentials(true);
+    configuration.setMaxAge(3600L);
+
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", configuration);
+    return source;
+}
+```
+
+## Common CORS Errors
+
+<Accordion title="CORS policy: No 'Access-Control-Allow-Origin' header">
+
+**Error in Browser Console:**
+```
+Access to XMLHttpRequest at 'http://localhost:8080/api/productos' 
+from origin 'http://localhost:5173' has been blocked by CORS policy: 
+No 'Access-Control-Allow-Origin' header is present on the requested resource.
+```
+
+**Causes:**
+
+1. Frontend origin not in allowed origins list
+2. CORS configuration not applied to all endpoints
+3. Backend not running or crashed
+
+**Solutions:**
+
+1. **Verify frontend URL matches allowed origins:**
+   - Check the URL in your browser address bar
+   - Must be exactly `http://localhost:5173` or `http://127.0.0.1:5173`
+
+2. **Add your origin to SecurityConfig.java:**
+```java
+configuration.setAllowedOrigins(Arrays.asList(
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000" // Add if using different port
+));
+```
+
+3. **For development, allow all origins (NOT for production):**
+```java
+configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+// Instead of setAllowedOrigins
+```
+
+4. **Verify CORS is applied globally:**
+   - Check that `corsConfigurationSource()` bean is defined
+   - Ensure it's registered in the security filter chain
+
+5. **Restart the backend after changes:**
+```bash
+cd Iqüea_back
+mvn spring-boot:run
+```
+
+<Warning>
+Never use `setAllowedOriginPatterns("*")` with `setAllowCredentials(true)` in production. Always specify exact origins.
+</Warning>
+
+</Accordion>
+
+<Accordion title="CORS policy: Request header field Authorization not allowed">
+
+**Error Message:**
+```
+Access to XMLHttpRequest at 'http://localhost:8080/api/pedidos' 
+from origin 'http://localhost:5173' has been blocked by CORS policy: 
+Request header field authorization is not allowed by 
+Access-Control-Allow-Headers in preflight response.
+```
+
+**Cause:**
+The `Authorization` header is not in the allowed headers list.
+
+**Solution:**
+
+1. **Verify allowed headers include Authorization:**
+   - Check `SecurityConfig.java:59-61`
+   - Should include: `"Authorization"`
+
+2. **If missing, add it:**
+```java
+configuration.setAllowedHeaders(Arrays.asList(
+    "Authorization",  // Must be included
+    "Content-Type", 
+    "X-Requested-With", 
+    "Accept",
+    "Origin"
+));
+```
+
+3. **Or allow all headers (development only):**
+```java
+configuration.setAllowedHeaders(Arrays.asList("*"));
+```
+
+4. **Ensure frontend sends correct header format:**
+```javascript
+fetch('http://localhost:8080/api/pedidos', {
+  headers: {
+    'Authorization': `Bearer ${token}`, // Correct format
+    'Content-Type': 'application/json'
+  }
+})
+```
+
+</Accordion>
+
+<Accordion title="CORS policy: Method not allowed">
+
+**Error Message:**
+```
+Access to XMLHttpRequest at 'http://localhost:8080/api/productos/1' 
+from origin 'http://localhost:5173' has been blocked by CORS policy: 
+Method DELETE is not allowed by Access-Control-Allow-Methods.
+```
+
+**Cause:**
+The HTTP method is not in the allowed methods list.
+
+**Solution:**
+
+1. **Check allowed methods in SecurityConfig.java:58:**
+```java
+configuration.setAllowedMethods(Arrays.asList(
+    "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
+));
+```
+
+2. **Verify the method is included** - all common methods should be there
+
+3. **If needed, add missing method:**
+```java
+configuration.setAllowedMethods(Arrays.asList(
+    "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"
+));
+```
+
+4. **Always include OPTIONS** for preflight requests
+
+</Accordion>
+
+<Accordion title="CORS preflight request fails (OPTIONS)">
+
+**Error Message:**
+```
+Access to XMLHttpRequest at 'http://localhost:8080/api/productos' 
+from origin 'http://localhost:5173' has been blocked by CORS policy: 
+Response to preflight request doesn't pass access control check.
+```
+
+**What is a preflight request?**
+
+Browsers send an OPTIONS request before certain requests (those with custom headers or methods other than GET/POST) to check if the actual request is allowed.
+
+**Solutions:**
+
+1. **Ensure OPTIONS method is allowed:**
+```java
+configuration.setAllowedMethods(Arrays.asList(
+    "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
+));
+```
+
+2. **Set maxAge to cache preflight responses:**
+```java
+configuration.setMaxAge(3600L); // Cache for 1 hour
+```
+   - Already configured in line 63
+
+3. **Check that CSRF is disabled (required for CORS):**
+   - In `SecurityConfig.java:27`:
+```java
+http.csrf(csrf -> csrf.disable())
+```
+
+4. **Verify OPTIONS requests aren't blocked by security:**
+   - OPTIONS requests should not require authentication
+
+5. **Check browser DevTools Network tab:**
+   - Look for OPTIONS request
+   - Check response headers:
+     - `Access-Control-Allow-Origin`
+     - `Access-Control-Allow-Methods`
+     - `Access-Control-Allow-Headers`
+
+</Accordion>
+
+<Accordion title="Credentials mode issues">
+
+**Error Message:**
+```
+Access to XMLHttpRequest at 'http://localhost:8080/api/auth/login' 
+from origin 'http://localhost:5173' has been blocked by CORS policy: 
+The value of the 'Access-Control-Allow-Credentials' header in the response 
+is '' which must be 'true' when the request's credentials mode is 'include'.
+```
+
+**Cause:**
+Mismatch between frontend credentials setting and backend CORS configuration.
+
+**Solutions:**
+
+1. **Backend: Ensure credentials are allowed:**
+   - Check `SecurityConfig.java:62`:
+```java
+configuration.setAllowCredentials(true);
+```
+
+2. **Frontend: Send credentials if needed:**
+```javascript
+fetch('http://localhost:8080/api/auth/login', {
+  method: 'POST',
+  credentials: 'include', // Sends cookies
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ email, password })
+})
+```
+
+3. **If not using cookies, omit credentials:**
+```javascript
+// If using JWT in localStorage, credentials not needed
+fetch('http://localhost:8080/api/productos', {
+  headers: {
+    'Authorization': `Bearer ${localStorage.getItem('token')}`
+  }
+  // No credentials: 'include' needed
+})
+```
+
+<Note>
+Iquea Commerce uses JWT tokens stored in localStorage, so `credentials: 'include'` is typically not needed unless you're also using cookies.
+</Note>
+
+</Accordion>
+
+## Development vs Production
+
+<Accordion title="CORS configuration for different environments">
+
+**Development Configuration:**
+
+Allow localhost origins:
+```java
+configuration.setAllowedOrigins(Arrays.asList(
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000"
+));
+```
+
+**Production Configuration:**
+
+1. **Use environment variables:**
+```java
+@Value("${app.cors.allowed-origins}")
+private String allowedOrigins;
+
+@Bean
+public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration configuration = new CorsConfiguration();
+    configuration.setAllowedOrigins(
+        Arrays.asList(allowedOrigins.split(","))
+    );
+    // ... rest of configuration
+}
+```
+
+2. **In application.properties:**
+```properties
+# Development
+app.cors.allowed-origins=http://localhost:5173,http://127.0.0.1:5173
+
+# Production (application-prod.properties)
+app.cors.allowed-origins=https://iquea.com,https://www.iquea.com
+```
+
+3. **Security best practices:**
+   - Always use HTTPS in production
+   - Specify exact domains (no wildcards)
+   - Keep credentials enabled only if needed
+   - Set appropriate maxAge for caching
+
+**Example Production Configuration:**
+```java
+if (environment.equals("production")) {
+    configuration.setAllowedOrigins(Arrays.asList(
+        "https://iquea.com",
+        "https://www.iquea.com"
+    ));
+} else {
+    configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+}
+```
+
+</Accordion>
+
+<Accordion title="Nginx/Apache proxy CORS configuration">
+
+**If using a reverse proxy in production:**
+
+**Nginx:**
+```nginx
+location /api {
+    proxy_pass http://localhost:8080;
+    
+    # Let Spring Boot handle CORS
+    proxy_set_header Origin $http_origin;
+    proxy_set_header Host $host;
+    
+    # Or handle CORS in Nginx
+    add_header Access-Control-Allow-Origin $http_origin always;
+    add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
+    add_header Access-Control-Allow-Headers "Authorization, Content-Type" always;
+    add_header Access-Control-Allow-Credentials true always;
+    
+    if ($request_method = OPTIONS) {
+        return 204;
+    }
+}
+```
+
+**Apache:**
+```apache
+<Location /api>
+    ProxyPass http://localhost:8080/api
+    ProxyPassReverse http://localhost:8080/api
+    
+    Header set Access-Control-Allow-Origin "%{HTTP_ORIGIN}e"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Authorization, Content-Type"
+    Header set Access-Control-Allow-Credentials "true"
+</Location>
+```
+
+<Warning>
+If configuring CORS in your proxy, disable or adjust the Spring Boot CORS configuration to avoid conflicts.
+</Warning>
+
+</Accordion>
+
+## Debugging CORS Issues
+
+### Browser DevTools
+
+1. **Open DevTools (F12) → Network tab**
+2. **Reproduce the error**
+3. **Look for the failed request**
+4. **Check Request Headers:**
+   - `Origin: http://localhost:5173`
+   - `Access-Control-Request-Method: POST` (for preflight)
+   - `Access-Control-Request-Headers: authorization` (for preflight)
+
+5. **Check Response Headers:**
+   - `Access-Control-Allow-Origin: http://localhost:5173`
+   - `Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, PATCH`
+   - `Access-Control-Allow-Headers: Authorization, Content-Type`
+   - `Access-Control-Allow-Credentials: true`
+
+### Testing with cURL
+
+```bash
+# Test preflight request
+curl -X OPTIONS http://localhost:8080/api/productos \
+  -H "Origin: http://localhost:5173" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: Authorization, Content-Type" \
+  -v
+
+# Test actual request
+curl -X GET http://localhost:8080/api/productos \
+  -H "Origin: http://localhost:5173" \
+  -v
+```
+
+Look for `Access-Control-*` headers in the response.
+
+## Common Mistakes
+
+<Warning>
+**Common CORS configuration mistakes:**
+
+1. Using `http://localhost:5173/` (with trailing slash) - should be `http://localhost:5173`
+2. Forgetting to restart backend after configuration changes
+3. Using wildcards with credentials in production
+4. Not including `OPTIONS` in allowed methods
+5. Blocking OPTIONS requests with authentication
+6. Typos in header names (e.g., `Authorisation` instead of `Authorization`)
+7. Testing with browser extensions that modify headers
+8. Configuring CORS in multiple places (proxy + Spring Boot)
+</Warning>
+
+## Quick Checklist
+
+When troubleshooting CORS issues:
+
+- [ ] Backend is running and accessible
+- [ ] Frontend origin is in `allowedOrigins` list
+- [ ] All required HTTP methods are in `allowedMethods`
+- [ ] `OPTIONS` method is included for preflight
+- [ ] Required headers are in `allowedHeaders`
+- [ ] `allowCredentials` matches frontend usage
+- [ ] Backend was restarted after configuration changes
+- [ ] Browser cache is cleared (Ctrl+Shift+Delete)
+- [ ] No browser extensions interfering with requests
+- [ ] CSRF is disabled in Spring Security
+
+## Additional Resources
+
+- [Common Issues](/troubleshooting/common-issues) - General troubleshooting
+- [Database Errors](/troubleshooting/database-errors) - Database issues
+- [MDN CORS Documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
+- [Spring Security CORS](https://docs.spring.io/spring-security/reference/servlet/integrations/cors.html)

@@ -1,0 +1,267 @@
+---
+title: 'Installation'
+description: 'Step-by-step guide to install and set up Iquea Commerce'
+---
+
+This guide walks you through the complete installation process for Iquea Commerce, including backend and frontend setup.
+
+## Overview
+
+Iquea Commerce follows a decoupled client-server architecture:
+
+- **Backend**: Spring Boot 3.4.0 REST API (Java 21)
+- **Frontend**: React 19 SPA with Vite 7 (TypeScript)
+- **Database**: MySQL 8.0+ for data persistence
+
+---
+
+## Installation Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the Iquea Commerce repository to your local machine:
+
+    ```bash
+    git clone <repository-url>
+    cd iquea-commerce
+    ```
+
+    The project structure should look like this:
+
+    ```
+    iquea-commerce/
+    ├── Iqüea_back/      # Backend (Spring Boot)
+    └── Iquea_front/     # Frontend (React + Vite)
+    ```
+  </Step>
+
+  <Step title="Set Up MySQL Database">
+    Connect to your MySQL server and create the application database:
+
+    ```sql
+    CREATE DATABASE IF NOT EXISTS apiIquea 
+      CHARACTER SET utf8mb4 
+      COLLATE utf8mb4_unicode_ci;
+    ```
+
+    <Note>
+      The application is configured with `createDatabaseIfNotExist=true`, so the database will be created automatically if it doesn't exist. However, manual creation ensures proper character encoding.
+    </Note>
+
+    **Verify database creation:**
+
+    ```sql
+    SHOW DATABASES LIKE 'apiIquea';
+    USE apiIquea;
+    ```
+
+    **Grant permissions (if using a non-root user):**
+
+    ```sql
+    GRANT ALL PRIVILEGES ON apiIquea.* TO 'your_user'@'localhost';
+    FLUSH PRIVILEGES;
+    ```
+  </Step>
+
+  <Step title="Install Backend Dependencies">
+    Navigate to the backend directory:
+
+    ```bash
+    cd Iqüea_back
+    ```
+
+    The project uses **Maven Wrapper**, so dependencies will be downloaded automatically on first run. To manually download dependencies:
+
+    **On Windows:**
+
+    ```bash
+    .\mvnw.cmd clean install -DskipTests
+    ```
+
+    **On Linux/macOS:**
+
+    ```bash
+    ./mvnw clean install -DskipTests
+    ```
+
+    This will:
+    - Download all Maven dependencies
+    - Compile the Java code
+    - Generate MapStruct mappers and Lombok code
+    - Package the application (without running tests)
+
+    <Note>
+      First-time execution may take 5-10 minutes as Maven downloads all dependencies. Subsequent builds will be much faster.
+    </Note>
+  </Step>
+
+  <Step title="Install Frontend Dependencies">
+    Navigate to the frontend directory:
+
+    ```bash
+    cd ../Iquea_front
+    ```
+
+    Install Node.js dependencies using npm:
+
+    ```bash
+    npm install
+    ```
+
+    This will install:
+    - React 19.2.0 and React DOM
+    - React Router DOM 7.13.0
+    - Vite 7.3.1 (build tool)
+    - TypeScript 5.9.3
+    - Additional UI libraries (react-icons, jwt-decode)
+
+    <Note>
+      The installation typically takes 2-3 minutes depending on your internet connection.
+    </Note>
+  </Step>
+
+  <Step title="Verify Installation">
+    Confirm that both backend and frontend are ready:
+
+    **Backend verification:**
+
+    ```bash
+    cd Iqüea_back
+    ./mvnw --version
+    ```
+
+    Expected output:
+
+    ```
+    Apache Maven 3.x.x
+    Java version: 21.x.x
+    ```
+
+    **Frontend verification:**
+
+    ```bash
+    cd ../Iquea_front
+    npm list --depth=0
+    ```
+
+    You should see the list of installed dependencies without errors.
+  </Step>
+</Steps>
+
+---
+
+## Troubleshooting
+
+### Backend Installation Issues
+
+**Problem: "Java version not compatible"**
+
+```
+FATAL ERROR: Compilation failure - Java version must be 21 or higher
+```
+
+**Solution:** Verify your Java version and ensure JDK 21 is installed:
+
+```bash
+java -version
+```
+
+If multiple Java versions are installed, set `JAVA_HOME` environment variable:
+
+```bash
+# Linux/macOS
+export JAVA_HOME=/path/to/jdk-21
+
+# Windows (PowerShell)
+$env:JAVA_HOME="C:\Program Files\Java\jdk-21"
+```
+
+---
+
+**Problem: "Cannot resolve dependencies"**
+
+**Solution:** Clear Maven cache and retry:
+
+```bash
+./mvnw clean
+rm -rf ~/.m2/repository/com/edu/mcs  # Remove cached artifacts
+./mvnw clean install -U  # Force update dependencies
+```
+
+---
+
+### Frontend Installation Issues
+
+**Problem: "npm ERR! peer dependencies"**
+
+**Solution:** Use `--legacy-peer-deps` flag:
+
+```bash
+npm install --legacy-peer-deps
+```
+
+---
+
+**Problem: "Node version too low"**
+
+**Solution:** Upgrade Node.js to version 18 or higher. Use [nvm](https://github.com/nvm-sh/nvm) for version management:
+
+```bash
+nvm install 20
+nvm use 20
+```
+
+---
+
+### Database Installation Issues
+
+**Problem: "Access denied for user 'root'@'localhost'"**
+
+**Solution:** Reset MySQL root password:
+
+```bash
+# Stop MySQL service
+sudo systemctl stop mysql
+
+# Start MySQL in safe mode
+sudo mysqld_safe --skip-grant-tables &
+
+# Reset password
+mysql -u root
+mysql> ALTER USER 'root'@'localhost' IDENTIFIED BY 'your_new_password';
+mysql> FLUSH PRIVILEGES;
+mysql> EXIT;
+
+# Restart MySQL
+sudo systemctl restart mysql
+```
+
+---
+
+## What's Installed?
+
+### Backend Dependencies
+
+- **Spring Boot 3.4.0** - Application framework
+- **Spring Security** - Authentication and authorization
+- **Spring Data JPA** - Database abstraction layer
+- **Hibernate** - ORM framework
+- **MySQL Connector** - JDBC driver
+- **JWT (0.12.6)** - JSON Web Token authentication
+- **MapStruct 1.6.0** - Entity-to-DTO mapping
+- **Lombok 1.18.38** - Boilerplate code reduction
+
+### Frontend Dependencies
+
+- **React 19.2.0** - UI library
+- **React Router DOM 7.13.0** - Client-side routing
+- **Vite 7.3.1** - Build tool and dev server
+- **TypeScript 5.9.3** - Type-safe JavaScript
+- **jwt-decode 4.0.0** - JWT parsing
+- **react-icons 5.5.0** - Icon library
+
+---
+
+## Next Steps
+
+Now that installation is complete, proceed to the [Configuration](/getting-started/configuration) guide to set up database credentials and application settings.

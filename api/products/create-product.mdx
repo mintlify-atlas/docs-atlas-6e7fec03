@@ -1,0 +1,269 @@
+---
+title: "Create Product"
+api: "POST /api/productos"
+description: "Create a new product in the catalog (Admin only)"
+---
+
+## Authentication
+
+<Warning>
+  This endpoint requires administrator authentication. Include a valid JWT token in the Authorization header.
+</Warning>
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for admin authentication
+  
+  Example: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+</ParamField>
+
+## Request Body
+
+<ParamField body="nombre" type="string" required>
+  Product name (max 155 characters)
+</ParamField>
+
+<ParamField body="sku" type="string" required>
+  Stock Keeping Unit - unique product code (max 50 characters)
+</ParamField>
+
+<ParamField body="descripcion" type="string">
+  Detailed product description
+</ParamField>
+
+<ParamField body="precioCantidad" type="decimal" required>
+  Price amount
+</ParamField>
+
+<ParamField body="precioMoneda" type="string" required>
+  Currency code (3 characters, e.g., "USD", "EUR")
+</ParamField>
+
+<ParamField body="dimensionesAlto" type="double" required>
+  Product height dimension
+</ParamField>
+
+<ParamField body="dimensionesAncho" type="double" required>
+  Product width dimension
+</ParamField>
+
+<ParamField body="dimensionesProfundo" type="double" required>
+  Product depth dimension
+</ParamField>
+
+<ParamField body="es_destacado" type="boolean">
+  Whether the product should be featured (default: false)
+</ParamField>
+
+<ParamField body="stock" type="integer" required>
+  Available quantity in inventory
+</ParamField>
+
+<ParamField body="imagen_url" type="string">
+  URL to product image
+</ParamField>
+
+<ParamField body="categoria" type="object" required>
+  Category information
+  
+  <Expandable title="Category Object">
+    <ParamField body="categoria_id" type="long" required>
+      Category unique identifier
+    </ParamField>
+    
+    <ParamField body="nombre" type="string">
+      Category name
+    </ParamField>
+    
+    <ParamField body="slug" type="string">
+      URL-friendly category identifier
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Response
+
+Returns the created product object with its assigned ID.
+
+<ResponseField name="producto_id" type="long">
+  Unique identifier assigned to the new product
+</ResponseField>
+
+<ResponseField name="sku" type="string">
+  Stock Keeping Unit
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  Product name
+</ResponseField>
+
+<ResponseField name="descripcion" type="string">
+  Product description
+</ResponseField>
+
+<ResponseField name="precioCantidad" type="decimal">
+  Price amount
+</ResponseField>
+
+<ResponseField name="precioMoneda" type="string">
+  Currency code
+</ResponseField>
+
+<ResponseField name="dimensionesAlto" type="double">
+  Height dimension
+</ResponseField>
+
+<ResponseField name="dimensionesAncho" type="double">
+  Width dimension
+</ResponseField>
+
+<ResponseField name="dimensionesProfundo" type="double">
+  Depth dimension
+</ResponseField>
+
+<ResponseField name="es_destacado" type="boolean">
+  Featured status
+</ResponseField>
+
+<ResponseField name="stock" type="integer">
+  Available quantity
+</ResponseField>
+
+<ResponseField name="imagen_url" type="string">
+  Product image URL
+</ResponseField>
+
+<ResponseField name="categoria" type="object">
+  Associated category
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl --location 'https://api.iquea.com/api/productos' \
+--header 'Authorization: Bearer YOUR_ADMIN_TOKEN' \
+--header 'Content-Type: application/json' \
+--data '{
+  "nombre": "Estantería Moderna",
+  "sku": "IKEA-SHELF-089",
+  "descripcion": "Estantería de 5 niveles con diseño minimalista",
+  "precioCantidad": 189.99,
+  "precioMoneda": "USD",
+  "dimensionesAlto": 180.0,
+  "dimensionesAncho": 80.0,
+  "dimensionesProfundo": 35.0,
+  "es_destacado": true,
+  "stock": 25,
+  "imagen_url": "https://images.iquea.com/estanteria-089.jpg",
+  "categoria": {
+    "categoria_id": 5,
+    "nombre": "Estanterías",
+    "slug": "estanterias"
+  }
+}'
+```
+
+```javascript JavaScript
+const token = 'YOUR_ADMIN_TOKEN';
+
+fetch('https://api.iquea.com/api/productos', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    nombre: 'Estantería Moderna',
+    sku: 'IKEA-SHELF-089',
+    descripcion: 'Estantería de 5 niveles con diseño minimalista',
+    precioCantidad: 189.99,
+    precioMoneda: 'USD',
+    dimensionesAlto: 180.0,
+    dimensionesAncho: 80.0,
+    dimensionesProfundo: 35.0,
+    es_destacado: true,
+    stock: 25,
+    imagen_url: 'https://images.iquea.com/estanteria-089.jpg',
+    categoria: {
+      categoria_id: 5,
+      nombre: 'Estanterías',
+      slug: 'estanterias'
+    }
+  })
+})
+.then(response => response.json())
+.then(data => console.log(data));
+```
+
+```python Python
+import requests
+
+token = 'YOUR_ADMIN_TOKEN'
+url = 'https://api.iquea.com/api/productos'
+
+headers = {
+    'Authorization': f'Bearer {token}',
+    'Content-Type': 'application/json'
+}
+
+data = {
+    'nombre': 'Estantería Moderna',
+    'sku': 'IKEA-SHELF-089',
+    'descripcion': 'Estantería de 5 niveles con diseño minimalista',
+    'precioCantidad': 189.99,
+    'precioMoneda': 'USD',
+    'dimensionesAlto': 180.0,
+    'dimensionesAncho': 80.0,
+    'dimensionesProfundo': 35.0,
+    'es_destacado': True,
+    'stock': 25,
+    'imagen_url': 'https://images.iquea.com/estanteria-089.jpg',
+    'categoria': {
+        'categoria_id': 5,
+        'nombre': 'Estanterías',
+        'slug': 'estanterias'
+    }
+}
+
+response = requests.post(url, json=data, headers=headers)
+product = response.json()
+```
+</RequestExample>
+
+<ResponseExample>
+```json 201 - Created
+{
+  "producto_id": 156,
+  "sku": "IKEA-SHELF-089",
+  "nombre": "Estantería Moderna",
+  "descripcion": "Estantería de 5 niveles con diseño minimalista",
+  "precioCantidad": 189.99,
+  "precioMoneda": "USD",
+  "dimensionesAlto": 180.0,
+  "dimensionesAncho": 80.0,
+  "dimensionesProfundo": 35.0,
+  "es_destacado": true,
+  "stock": 25,
+  "imagen_url": "https://images.iquea.com/estanteria-089.jpg",
+  "categoria": {
+    "categoria_id": 5,
+    "nombre": "Estanterías",
+    "slug": "estanterias"
+  }
+}
+```
+
+```json 403 - Forbidden
+{
+  "error": "Access denied. Administrator privileges required."
+}
+```
+</ResponseExample>
+
+## Status Codes
+
+<ResponseField name="201" type="Created">
+  Product successfully created
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  Invalid or missing authentication token, or insufficient permissions
+</ResponseField>

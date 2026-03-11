@@ -1,0 +1,112 @@
+---
+title: "Get User by ID"
+api: "GET /api/usuarios/{id}"
+description: "Retrieve detailed information about a specific user"
+---
+
+## Authentication
+
+**Required:** Authenticated user
+
+This endpoint requires authentication. Users can retrieve their own information, while administrators can retrieve any user's information.
+
+## Path Parameters
+
+<ParamField path="id" type="long" required>
+  The unique identifier of the user to retrieve
+</ParamField>
+
+## Request
+
+```bash
+curl -X GET https://api.iquea.com/api/usuarios/1 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+## Response
+
+Returns a single user object.
+
+<ResponseField name="usuario_id" type="long">
+  Unique identifier for the user
+</ResponseField>
+
+<ResponseField name="username" type="string">
+  User's unique username (max 100 characters)
+</ResponseField>
+
+<ResponseField name="email" type="object">
+  User's email address (unique across the system)
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  User's first name (max 100 characters)
+</ResponseField>
+
+<ResponseField name="apellidos" type="string">
+  User's last name(s) (max 150 characters)
+</ResponseField>
+
+<ResponseField name="rol" type="enum">
+  User role. Possible values:
+  - `ADMIN` - Administrator with full access
+  - `CLIENTE` - Regular customer (default)
+</ResponseField>
+
+<ResponseField name="direccion_envio" type="string">
+  User's shipping address
+</ResponseField>
+
+<ResponseField name="fecha_nacimiento" type="date">
+  User's date of birth (ISO 8601 format: YYYY-MM-DD)
+</ResponseField>
+
+<ResponseField name="activo" type="boolean">
+  Whether the user account is active
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "usuario_id": 1,
+  "username": "johndoe",
+  "email": {
+    "value": "john@example.com"
+  },
+  "nombre": "John",
+  "apellidos": "Doe Smith",
+  "rol": "CLIENTE",
+  "direccion_envio": "123 Main St, Madrid, Spain",
+  "fecha_nacimiento": "1990-05-15",
+  "activo": true
+}
+```
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Successfully retrieved user information
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid authentication token
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  User attempting to access another user's information without admin privileges
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  User with the specified ID does not exist
+</ResponseField>
+
+## Security Notes
+
+<Warning>
+  **Password Protection:** User passwords are never included in API responses. The `password` field is stored securely in the database but excluded from all DTO responses.
+</Warning>
+
+<Info>
+  **Access Control:** Regular users (CLIENTE role) can only retrieve their own user information. Only administrators (ADMIN role) can retrieve information about other users.
+</Info>

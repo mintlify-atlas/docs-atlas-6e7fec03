@@ -1,0 +1,443 @@
+---
+title: Backend Deployment
+description: Deploy the Spring Boot backend application to production
+---
+
+This guide covers deploying the Iquea Commerce backend application built with Spring Boot 3.4.0 and Java 21.
+
+## Building the Application
+
+The backend uses Maven to build a standalone executable JAR file.
+
+<Steps>
+  <Step title="Navigate to backend directory">
+    ```bash
+    cd Iqüea_back
+    ```
+  </Step>
+
+  <Step title="Build the JAR file">
+    Use the Maven wrapper to build the application:
+    
+    ```bash
+    ./mvnw clean package
+    ```
+    
+    On Windows:
+    ```bash
+    mvnw.cmd clean package
+    ```
+    
+    This command:
+    - Cleans previous builds
+    - Compiles Java source code
+    - Runs tests
+    - Packages the application as an executable JAR
+  </Step>
+
+  <Step title="Locate the JAR file">
+    The built JAR file will be in the `target/` directory:
+    
+    ```
+    target/Biblioteca-0.0.1-SNAPSHOT.jar
+    ```
+  </Step>
+</Steps>
+
+### Skip Tests (Optional)
+
+To build without running tests:
+
+```bash
+./mvnw clean package -DskipTests
+```
+
+## Running in Production
+
+The generated JAR file is a fully executable Spring Boot application.
+
+### Basic Execution
+
+```bash
+java -jar target/Biblioteca-0.0.1-SNAPSHOT.jar
+```
+
+### With JVM Options
+
+For production deployments, configure JVM memory and performance settings:
+
+```bash
+java -Xms512m -Xmx2048m \
+     -XX:+UseG1GC \
+     -XX:MaxGCPauseMillis=200 \
+     -Dserver.port=8080 \
+     -jar target/Biblioteca-0.0.1-SNAPSHOT.jar
+```
+
+**JVM Options explained:**
+- `-Xms512m` - Initial heap size (512 MB)
+- `-Xmx2048m` - Maximum heap size (2 GB)
+- `-XX:+UseG1GC` - Use G1 garbage collector (recommended for Spring Boot)
+- `-XX:MaxGCPauseMillis=200` - Target maximum GC pause time
+
+## Environment Variables
+
+<Warning>
+  Never commit production credentials to version control. Always use environment variables or external configuration.
+</Warning>
+
+### Database Configuration
+
+The application requires these database environment variables:
+
+```bash
+export DB_USERNAME=your_db_user
+export DB_PASSWORD=your_secure_password
+export SPRING_DATASOURCE_URL=jdbc:mysql://your-db-host:3306/apiIquea
+```
+
+### Application Properties Override
+
+You can override any Spring Boot property using environment variables or command-line arguments:
+
+```bash
+# Using environment variables
+export SPRING_DATASOURCE_URL=jdbc:mysql://production-db:3306/apiIquea
+export SPRING_DATASOURCE_USERNAME=prod_user
+export SPRING_DATASOURCE_PASSWORD=secure_password
+export SPRING_JPA_HIBERNATE_DDL_AUTO=validate
+export SERVER_PORT=8080
+
+java -jar target/Biblioteca-0.0.1-SNAPSHOT.jar
+```
+
+```bash
+# Using command-line arguments
+java -jar target/Biblioteca-0.0.1-SNAPSHOT.jar \
+  --spring.datasource.url=jdbc:mysql://production-db:3306/apiIquea \
+  --spring.datasource.username=prod_user \
+  --spring.datasource.password=secure_password \
+  --spring.jpa.hibernate.ddl-auto=validate
+```
+
+### Production Configuration File
+
+Create `application-prod.properties` in `src/main/resources/`:
+
+```properties
+# Production profile
+spring.datasource.url=${SPRING_DATASOURCE_URL}
+spring.datasource.username=${DB_USERNAME}
+spring.datasource.password=${DB_PASSWORD}
+
+# Security: Don't auto-update schema in production
+spring.jpa.hibernate.ddl-auto=validate
+
+# Disable SQL logging in production
+spring.jpa.show-sql=false
+
+# Don't initialize database from data.sql in production
+spring.sql.init.mode=never
+
+# Connection pooling
+spring.datasource.hikari.maximum-pool-size=10
+spring.datasource.hikari.minimum-idle=5
+spring.datasource.hikari.connection-timeout=20000
+spring.datasource.hikari.idle-timeout=300000
+
+# Actuator security
+management.endpoints.web.exposure.include=health,info,metrics
+management.endpoint.health.show-details=when-authorized
+```
+
+Run with the production profile:
+
+```bash
+java -jar target/Biblioteca-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
+```
+
+## Database Configuration
+
+<Warning>
+  In production, always set `spring.jpa.hibernate.ddl-auto=validate` or `none` to prevent automatic schema changes.
+</Warning>
+
+### Connection Pool Settings
+
+The application uses HikariCP (default in Spring Boot). Recommended production settings:
+
+```properties
+# Maximum number of connections in the pool
+spring.datasource.hikari.maximum-pool-size=10
+
+# Minimum number of idle connections
+spring.datasource.hikari.minimum-idle=5
+
+# Connection timeout (20 seconds)
+spring.datasource.hikari.connection-timeout=20000
+
+# Maximum lifetime of a connection (30 minutes)
+spring.datasource.hikari.max-lifetime=1800000
+
+# Idle timeout (5 minutes)
+spring.datasource.hikari.idle-timeout=300000
+```
+
+### Connection URL Format
+
+```
+jdbc:mysql://[host]:[port]/[database]?useSSL=true&requireSSL=true&serverTimezone=UTC
+```
+
+Example:
+```
+jdbc:mysql://db.example.com:3306/apiIquea?useSSL=true&requireSSL=true&serverTimezone=UTC
+```
+
+## JVM Memory Settings
+
+Recommended memory settings based on application load:
+
+### Small Applications (< 100 concurrent users)
+```bash
+-Xms256m -Xmx512m
+```
+
+### Medium Applications (100-500 concurrent users)
+```bash
+-Xms512m -Xmx1024m
+```
+
+### Large Applications (500+ concurrent users)
+```bash
+-Xms1024m -Xmx2048m
+```
+
+### Monitoring Memory Usage
+
+Enable Spring Boot Actuator (already included) to monitor memory:
+
+```bash
+curl http://localhost:8080/actuator/metrics/jvm.memory.used
+```
+
+## Deployment Platforms
+
+### AWS Elastic Beanstalk
+
+<Steps>
+  <Step title="Install EB CLI">
+    ```bash
+    pip install awsebcli
+    ```
+  </Step>
+
+  <Step title="Initialize EB">
+    ```bash
+    eb init -p java-21 iquea-backend
+    ```
+  </Step>
+
+  <Step title="Create environment">
+    ```bash
+    eb create production-env
+    ```
+  </Step>
+
+  <Step title="Set environment variables">
+    ```bash
+    eb setenv DB_USERNAME=prod_user DB_PASSWORD=secure_password
+    ```
+  </Step>
+
+  <Step title="Deploy">
+    ```bash
+    eb deploy
+    ```
+  </Step>
+</Steps>
+
+### Heroku
+
+<Steps>
+  <Step title="Create Heroku app">
+    ```bash
+    heroku create iquea-backend
+    ```
+  </Step>
+
+  <Step title="Add MySQL addon">
+    ```bash
+    heroku addons:create jawsdb-maria:kitefin
+    ```
+  </Step>
+
+  <Step title="Configure buildpack">
+    ```bash
+    heroku buildpacks:set heroku/java
+    ```
+  </Step>
+
+  <Step title="Set environment variables">
+    ```bash
+    heroku config:set SPRING_PROFILES_ACTIVE=prod
+    ```
+  </Step>
+
+  <Step title="Deploy">
+    ```bash
+    git push heroku main
+    ```
+  </Step>
+</Steps>
+
+### DigitalOcean Droplet
+
+<Steps>
+  <Step title="Create droplet">
+    Create an Ubuntu 22.04 droplet with at least 2GB RAM
+  </Step>
+
+  <Step title="Install Java 21">
+    ```bash
+    sudo apt update
+    sudo apt install openjdk-21-jre-headless
+    ```
+  </Step>
+
+  <Step title="Upload JAR file">
+    ```bash
+    scp target/Biblioteca-0.0.1-SNAPSHOT.jar user@your-droplet:/opt/iquea/
+    ```
+  </Step>
+
+  <Step title="Create systemd service">
+    Create `/etc/systemd/system/iquea.service`:
+    
+    ```ini
+    [Unit]
+    Description=Iquea Commerce Backend
+    After=syslog.target network.target
+
+    [Service]
+    User=iquea
+    ExecStart=/usr/bin/java -Xms512m -Xmx1024m -jar /opt/iquea/Biblioteca-0.0.1-SNAPSHOT.jar
+    SuccessExitStatus=143
+    Restart=always
+    RestartSec=10
+    Environment="DB_USERNAME=prod_user"
+    Environment="DB_PASSWORD=secure_password"
+    Environment="SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/apiIquea"
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+  </Step>
+
+  <Step title="Start service">
+    ```bash
+    sudo systemctl enable iquea
+    sudo systemctl start iquea
+    sudo systemctl status iquea
+    ```
+  </Step>
+</Steps>
+
+### Docker Deployment
+
+Create a `Dockerfile` in the backend directory:
+
+```dockerfile
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY target/Biblioteca-0.0.1-SNAPSHOT.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-Xms512m", "-Xmx1024m", "-jar", "app.jar"]
+```
+
+Build and run:
+
+```bash
+# Build
+docker build -t iquea-backend .
+
+# Run
+docker run -d -p 8080:8080 \
+  -e DB_USERNAME=prod_user \
+  -e DB_PASSWORD=secure_password \
+  -e SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/apiIquea \
+  --name iquea-backend \
+  iquea-backend
+```
+
+## Security Considerations
+
+<Warning>
+  Always secure your production deployment with these essential measures.
+</Warning>
+
+1. **Use HTTPS** - Configure SSL/TLS certificates (Let's Encrypt, AWS Certificate Manager)
+2. **Environment Variables** - Never hardcode credentials
+3. **Database Security** - Use strong passwords and restrict network access
+4. **JWT Secret** - Use a strong, randomly generated secret key
+5. **CORS Configuration** - Restrict allowed origins to your frontend domain
+6. **Actuator Endpoints** - Secure or disable in production
+7. **Regular Updates** - Keep dependencies updated for security patches
+
+## Monitoring and Logs
+
+### Application Logs
+
+Configure logging in `application-prod.properties`:
+
+```properties
+# Log to file
+logging.file.name=/var/log/iquea/application.log
+logging.file.max-size=10MB
+logging.file.max-history=30
+
+# Log levels
+logging.level.root=INFO
+logging.level.edu.rico.rest=INFO
+logging.level.org.springframework.web=WARN
+```
+
+### Health Checks
+
+Use the actuator health endpoint:
+
+```bash
+curl http://localhost:8080/actuator/health
+```
+
+### Performance Monitoring
+
+Consider adding monitoring tools:
+- Spring Boot Admin
+- Prometheus + Grafana
+- New Relic
+- Datadog
+- AWS CloudWatch
+
+## Troubleshooting
+
+### Application Won't Start
+
+- Check Java version: `java -version` (should be Java 21)
+- Verify database connectivity
+- Check logs for error messages
+- Ensure port 8080 is not already in use
+
+### Out of Memory Errors
+
+- Increase heap size: `-Xmx2048m` or higher
+- Analyze memory usage with `jmap` and `jhat`
+- Check for memory leaks
+
+### Database Connection Failures
+
+- Verify database is running and accessible
+- Check connection string format
+- Verify username and password
+- Check firewall rules
+- Test connection: `telnet db-host 3306`

@@ -1,0 +1,199 @@
+---
+title: Frontend Overview
+description: Architecture and technology stack of the Iquea Commerce frontend application
+---
+
+# Frontend Overview
+
+The Iquea Commerce frontend is a modern React application built with TypeScript, providing a fast and responsive user interface for the e-commerce platform.
+
+## Technology Stack
+
+The frontend leverages cutting-edge web technologies:
+
+<CardGroup cols={2}>
+  <Card title="React 19" icon="react" iconType="duotone">
+    Latest React with improved performance and new features
+  </Card>
+  <Card title="TypeScript 5.9" icon="code" iconType="duotone">
+    Type-safe development with advanced type checking
+  </Card>
+  <Card title="Vite 7" icon="bolt" iconType="duotone">
+    Lightning-fast build tool and dev server
+  </Card>
+  <Card title="React Router 7" icon="route" iconType="duotone">
+    Client-side routing with modern navigation
+  </Card>
+</CardGroup>
+
+## Key Dependencies
+
+Based on the project's `package.json`:
+
+```json package.json
+{
+  "dependencies": {
+    "jwt-decode": "^4.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.13.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1"
+  }
+}
+```
+
+### Core Libraries
+
+- **jwt-decode** - Decodes JWT tokens for authentication
+- **react-icons** - Icon library with FiIcons and Material Design icons
+- **react-router-dom** - Client-side routing
+
+## Project Structure
+
+The source code follows a modular, feature-based structure:
+
+```
+src/
+├── api/                  # API client and service modules
+│   ├── client.ts        # Base HTTP client with auth headers
+│   ├── auth.ts          # Authentication endpoints
+│   ├── productos.ts     # Product endpoints
+│   ├── categorias.ts    # Category endpoints
+│   └── pedidos.ts       # Order endpoints
+├── components/          # Reusable UI components
+│   ├── Navbar.tsx       # Navigation bar
+│   ├── Footer.tsx       # Site footer
+│   └── ProductoCard.tsx # Product card display
+├── context/             # React Context providers
+│   ├── AuthContext.tsx  # Authentication state
+│   └── CartContext.tsx  # Shopping cart state
+├── pages/               # Route-level page components
+│   ├── Home.tsx
+│   ├── Login.tsx
+│   ├── Register.tsx
+│   ├── ProductList.tsx
+│   ├── ProductDetail.tsx
+│   ├── Cart.tsx
+│   ├── Habitaciones.tsx
+│   ├── Nosotros.tsx
+│   └── Contacto.tsx
+├── types/               # TypeScript type definitions
+│   └── index.ts         # Shared interfaces and types
+├── App.tsx              # Root application component
+└── main.tsx             # Application entry point
+```
+
+## Development Workflow
+
+### Starting Development Server
+
+```bash
+npm run dev
+```
+
+Starts the Vite development server with hot module replacement (HMR) on `http://localhost:5173`.
+
+### Building for Production
+
+```bash
+npm run build
+```
+
+Compiles TypeScript and creates an optimized production build in the `dist/` directory.
+
+### Type Checking
+
+TypeScript compilation happens automatically during build:
+
+```bash
+npm run build  # Runs tsc -b && vite build
+```
+
+### Linting
+
+```bash
+npm run lint
+```
+
+Runs ESLint with React-specific rules to maintain code quality.
+
+### Preview Production Build
+
+```bash
+npm run preview
+```
+
+Serves the production build locally for testing before deployment.
+
+## Configuration Files
+
+### Vite Configuration
+
+```typescript vite.config.ts
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+})
+```
+
+### TypeScript Configuration
+
+The project uses three TypeScript config files:
+
+- `tsconfig.json` - Base configuration
+- `tsconfig.app.json` - Application-specific settings
+- `tsconfig.node.json` - Node/build tool settings
+
+## Styling Approach
+
+The application uses **pure CSS** without any CSS framework:
+
+- Component-specific CSS files (e.g., `Navbar.css`, `Footer.css`)
+- BEM-like naming convention (e.g., `navbar__container`, `navbar__link`)
+- Custom properties for theming
+- No CSS-in-JS or utility frameworks
+
+## Architecture Patterns
+
+### Context-Based State Management
+
+Global state is managed using React Context API:
+- `AuthContext` - User authentication state
+- `CartContext` - Shopping cart state
+
+### Type-Safe API Layer
+
+All API calls are typed with TypeScript interfaces, ensuring type safety throughout the application.
+
+### Component Composition
+
+Reusable components follow React best practices:
+- Functional components with hooks
+- Props interfaces for type safety
+- Separation of concerns (UI vs. logic)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="React Components" icon="puzzle-piece" href="./components">
+    Learn about the UI component library
+  </Card>
+  <Card title="Routing Setup" icon="route" href="./routing">
+    Understand the application routing
+  </Card>
+  <Card title="State Management" icon="database" href="./state-management">
+    Explore authentication and cart contexts
+  </Card>
+  <Card title="API Integration" icon="plug" href="./api-integration">
+    See how the frontend connects to the backend
+  </Card>
+</CardGroup>

@@ -1,0 +1,146 @@
+---
+title: "Create Order"
+api: "POST /api/pedidos"
+---
+
+Creates a new order with line items. The order reference is auto-generated.
+
+## Authentication
+
+Requires JWT token in the Authorization header.
+
+```bash
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+## Request Body
+
+Send a `PedidoDetalleDTO` object with order details. The `pedido_id`, `referencia`, `fechaPedido`, and calculated fields are auto-generated.
+
+```json
+{
+  "usuario": {
+    "usuario_id": 5
+  },
+  "estado": "PENDIENTE",
+  "detalles": [
+    {
+      "producto": {
+        "producto_id": 10
+      },
+      "cantidad": 2,
+      "precioUnitario": 49.99
+    },
+    {
+      "producto": {
+        "producto_id": 15
+      },
+      "cantidad": 1,
+      "precioUnitario": 129.99
+    }
+  ]
+}
+```
+
+### Request Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `usuario.usuario_id` | Long | Yes | ID of the user placing the order |
+| `estado` | String | Yes | Initial order status (typically "PENDIENTE") |
+| `detalles` | Array | Yes | Array of order line items (at least one required) |
+| `detalles[].producto.producto_id` | Long | Yes | Product ID |
+| `detalles[].cantidad` | Integer | Yes | Quantity to order |
+| `detalles[].precioUnitario` | BigDecimal | Yes | Unit price |
+
+### EstadoPedido Values
+
+- `PENDIENTE` - Order pending
+- `PAGADO` - Order paid
+- `ENVIADO` - Order shipped
+- `ENTREGADO` - Order delivered
+- `CANCELADO` - Order cancelled
+
+## Response
+
+Returns the created order with auto-generated fields populated.
+
+### Response Body
+
+```json
+{
+  "pedido_id": 42,
+  "referencia": "ORD-2026-042",
+  "usuario": {
+    "usuario_id": 5,
+    "username": "john_doe",
+    "email": {
+      "address": "john@example.com"
+    }
+  },
+  "fechaPedido": "2026-03-11T14:22:35",
+  "estado": "PENDIENTE",
+  "detalles": [
+    {
+      "detalle_id": 101,
+      "producto": {
+        "producto_id": 10,
+        "nombre": "BILLY Bookcase",
+        "precioCantidad": 49.99,
+        "precioMoneda": "USD",
+        "es_destacado": false
+      },
+      "cantidad": 2,
+      "precioUnitario": 49.99,
+      "subtotal": 99.98
+    },
+    {
+      "detalle_id": 102,
+      "producto": {
+        "producto_id": 15,
+        "nombre": "MALM Dresser",
+        "precioCantidad": 129.99,
+        "precioMoneda": "USD",
+        "es_destacado": true
+      },
+      "cantidad": 1,
+      "precioUnitario": 129.99,
+      "subtotal": 129.99
+    }
+  ],
+  "total": 229.97
+}
+```
+
+## Example Request
+
+```bash
+curl -X POST "https://api.iquea.com/api/pedidos" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "usuario": {
+      "usuario_id": 5
+    },
+    "estado": "PENDIENTE",
+    "detalles": [
+      {
+        "producto": {
+          "producto_id": 10
+        },
+        "cantidad": 2,
+        "precioUnitario": 49.99
+      }
+    ]
+  }'
+```
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| 201 | Created - Order successfully created |
+| 400 | Bad request - Invalid order data |
+| 401 | Unauthorized - Invalid or missing token |
+| 404 | Not found - User or product not found |
+| 500 | Internal server error |

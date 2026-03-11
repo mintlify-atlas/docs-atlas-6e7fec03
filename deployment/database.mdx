@@ -1,0 +1,510 @@
+---
+title: Database Deployment
+description: Set up and configure MySQL database for production
+---
+
+This guide covers deploying and configuring MySQL for the Iquea Commerce application in production environments.
+
+## Production MySQL Setup
+
+The application requires MySQL 8.0 or higher for optimal performance and compatibility.
+
+### Installation Options
+
+<Tabs>
+  <Tab title="Ubuntu/Debian">
+    ```bash
+    # Update package index
+    sudo apt update
+
+    # Install MySQL Server
+    sudo apt install mysql-server
+
+    # Secure installation
+    sudo mysql_secure_installation
+    ```
+  </Tab>
+
+  <Tab title="CentOS/RHEL">
+    ```bash
+    # Install MySQL repository
+    sudo yum install mysql-server
+
+    # Start MySQL service
+    sudo systemctl start mysqld
+    sudo systemctl enable mysqld
+
+    # Get temporary password
+    sudo grep 'temporary password' /var/log/mysqld.log
+
+    # Secure installation
+    sudo mysql_secure_installation
+    ```
+  </Tab>
+
+  <Tab title="Docker">
+    ```bash
+    # Run MySQL container
+    docker run -d \
+      --name iquea-mysql \
+      -e MYSQL_ROOT_PASSWORD=secure_root_password \
+      -e MYSQL_DATABASE=apiIquea \
+      -e MYSQL_USER=iquea_user \
+      -e MYSQL_PASSWORD=secure_password \
+      -p 3306:3306 \
+      -v iquea-mysql-data:/var/lib/mysql \
+      mysql:8.0
+    ```
+  </Tab>
+
+  <Tab title="Cloud Services">
+    **AWS RDS**
+    - Choose MySQL 8.0
+    - Select appropriate instance size (db.t3.small or larger)
+    - Enable automated backups
+    - Configure security groups
+
+    **Google Cloud SQL**
+    - Create MySQL 8.0 instance
+    - Configure automatic backups
+    - Set up connection settings
+
+    **Azure Database for MySQL**
+    - Provision MySQL flexible server
+    - Configure firewall rules
+    - Enable backups
+  </Tab>
+</Tabs>
+
+## Database Creation and Migration
+
+<Steps>
+  <Step title="Connect to MySQL">
+    ```bash
+    mysql -u root -p
+    ```
+  </Step>
+
+  <Step title="Create the database">
+    ```sql
+    CREATE DATABASE apiIquea
+      CHARACTER SET utf8mb4
+      COLLATE utf8mb4_unicode_ci;
+    ```
+    
+    The application uses `utf8mb4` for full Unicode support, including emojis and special characters.
+  </Step>
+
+  <Step title="Verify database creation">
+    ```sql
+    SHOW DATABASES;
+    USE apiIquea;
+    ```
+  </Step>
+
+  <Step title="Let Spring Boot create tables">
+    On first run with `spring.jpa.hibernate.ddl-auto=update`, Spring Boot will:
+    - Create all necessary tables
+    - Set up relationships and indexes
+    - Execute the `data.sql` initialization script
+  </Step>
+</Steps>
+
+<Warning>
+  For production, change `spring.jpa.hibernate.ddl-auto` to `validate` or `none` after initial setup to prevent automatic schema changes.
+</Warning>
+
+## User Permissions and Security
+
+### Create Application User
+
+Never use the root user for application connections. Create a dedicated user:
+
+```sql
+-- Create application user
+CREATE USER 'iquea_user'@'localhost' IDENTIFIED BY 'secure_strong_password';
+
+-- Grant necessary permissions
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, INDEX, ALTER
+  ON apiIquea.*
+  TO 'iquea_user'@'localhost';
+
+-- Apply changes
+FLUSH PRIVILEGES;
+```
+
+### Remote Access (if needed)
+
+```sql
+-- Allow access from specific IP
+CREATE USER 'iquea_user'@'192.168.1.100' IDENTIFIED BY 'secure_strong_password';
+GRANT SELECT, INSERT, UPDATE, DELETE
+  ON apiIquea.*
+  TO 'iquea_user'@'192.168.1.100';
+
+-- Or allow from any host (less secure)
+CREATE USER 'iquea_user'@'%' IDENTIFIED BY 'secure_strong_password';
+GRANT SELECT, INSERT, UPDATE, DELETE
+  ON apiIquea.*
+  TO 'iquea_user'@'%';
+
+FLUSH PRIVILEGES;
+```
+
+<Warning>
+  Using `@'%'` allows connections from any host. Only use this if absolutely necessary and ensure proper firewall rules are in place.
+</Warning>
+
+### Password Requirements
+
+MySQL 8.0 enforces strong passwords by default. Ensure passwords:
+- Are at least 12 characters long
+- Include uppercase and lowercase letters
+- Include numbers and special characters
+- Are not common dictionary words
+
+### Verify User Permissions
+
+```sql
+SHOW GRANTS FOR 'iquea_user'@'localhost';
+```
+
+## Backup and Restore Procedures
+
+### Automated Daily Backups
+
+Create a backup script `/opt/scripts/backup-iquea-db.sh`:
+
+```bash
+#!/bin/bash
+
+# Configuration
+DB_NAME="apiIquea"
+DB_USER="backup_user"
+DB_PASS="backup_password"
+BACKUP_DIR="/var/backups/mysql"
+DATE=$(date +%Y%m%d_%H%M%S)
+RETENTION_DAYS=30
+
+# Create backup directory if it doesn't exist
+mkdir -p $BACKUP_DIR
+
+# Backup database
+mysqldump -u $DB_USER -p$DB_PASS \
+  --single-transaction \
+  --routines \
+  --triggers \
+  --events \
+  $DB_NAME | gzip > $BACKUP_DIR/${DB_NAME}_${DATE}.sql.gz
+
+# Remove old backups
+find $BACKUP_DIR -name "${DB_NAME}_*.sql.gz" -mtime +$RETENTION_DAYS -delete
+
+# Log completion
+echo "[$(date)] Backup completed: ${DB_NAME}_${DATE}.sql.gz" >> /var/log/mysql-backup.log
+```
+
+Make it executable and schedule with cron:
+
+```bash
+chmod +x /opt/scripts/backup-iquea-db.sh
+
+# Run daily at 2 AM
+crontab -e
+0 2 * * * /opt/scripts/backup-iquea-db.sh
+```
+
+### Manual Backup
+
+```bash
+# Full backup
+mysqldump -u iquea_user -p \
+  --single-transaction \
+  --routines \
+  --triggers \
+  apiIquea > apiIquea_backup_$(date +%Y%m%d).sql
+
+# Compress
+gzip apiIquea_backup_$(date +%Y%m%d).sql
+```
+
+### Restore from Backup
+
+```bash
+# Decompress if needed
+gunzip apiIquea_backup_20260311.sql.gz
+
+# Restore database
+mysql -u root -p apiIquea < apiIquea_backup_20260311.sql
+```
+
+### Cloud Backup Solutions
+
+- **AWS RDS**: Automated backups with point-in-time recovery
+- **Google Cloud SQL**: Automated backups and snapshots
+- **Azure Database**: Automated backups with 35-day retention
+- **Third-party**: Percona XtraBackup, MySQL Enterprise Backup
+
+## Connection Pooling Configuration
+
+The application uses HikariCP for connection pooling. Configure in `application-prod.properties`:
+
+```properties
+# Connection Pool Settings
+spring.datasource.hikari.maximum-pool-size=10
+spring.datasource.hikari.minimum-idle=5
+spring.datasource.hikari.connection-timeout=20000
+spring.datasource.hikari.idle-timeout=300000
+spring.datasource.hikari.max-lifetime=1800000
+spring.datasource.hikari.leak-detection-threshold=60000
+```
+
+### Pool Size Recommendations
+
+**Formula**: `connections = ((core_count * 2) + effective_spindle_count)`
+
+For typical applications:
+- **Small** (< 100 users): 5-10 connections
+- **Medium** (100-500 users): 10-20 connections
+- **Large** (500+ users): 20-50 connections
+
+<Warning>
+  More connections ≠ better performance. Too many connections can degrade database performance. Start small and increase based on monitoring.
+</Warning>
+
+### MySQL Maximum Connections
+
+Set MySQL to allow enough connections:
+
+```sql
+-- Check current setting
+SHOW VARIABLES LIKE 'max_connections';
+
+-- Set to 200 (adjust based on your needs)
+SET GLOBAL max_connections = 200;
+```
+
+Make it permanent in `/etc/mysql/mysql.conf.d/mysqld.cnf`:
+
+```ini
+[mysqld]
+max_connections = 200
+```
+
+## Performance Tuning
+
+### MySQL Configuration
+
+Edit `/etc/mysql/mysql.conf.d/mysqld.cnf`:
+
+```ini
+[mysqld]
+# Basic Settings
+max_connections = 200
+max_allowed_packet = 64M
+
+# InnoDB Buffer Pool (set to 70-80% of available RAM)
+innodb_buffer_pool_size = 2G
+innodb_buffer_pool_instances = 2
+
+# InnoDB Log Files
+innodb_log_file_size = 256M
+innodb_log_buffer_size = 16M
+innodb_flush_log_at_trx_commit = 2
+
+# Query Cache (disabled in MySQL 8.0+)
+# Use application-level caching instead
+
+# Temporary Tables
+tmp_table_size = 64M
+max_heap_table_size = 64M
+
+# Connection Settings
+wait_timeout = 600
+interactive_timeout = 600
+
+# Character Set
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+```
+
+Restart MySQL after changes:
+
+```bash
+sudo systemctl restart mysql
+```
+
+### Indexing Strategy
+
+The application uses Hibernate to manage indexes, but you can add custom indexes:
+
+```sql
+-- Index on frequently queried columns
+CREATE INDEX idx_producto_nombre ON productos(nombre);
+CREATE INDEX idx_pedido_usuario ON pedidos(usuario_id);
+CREATE INDEX idx_pedido_fecha ON pedidos(fecha_pedido);
+
+-- Composite indexes for common queries
+CREATE INDEX idx_producto_categoria_precio ON productos(categoria_id, precio);
+```
+
+### Query Performance
+
+Enable slow query log for optimization:
+
+```sql
+SET GLOBAL slow_query_log = 'ON';
+SET GLOBAL slow_query_log_file = '/var/log/mysql/slow-query.log';
+SET GLOBAL long_query_time = 2;
+```
+
+Analyze slow queries:
+
+```bash
+sudo mysqldumpslow -s t -t 10 /var/log/mysql/slow-query.log
+```
+
+## Monitoring Recommendations
+
+### Built-in Monitoring
+
+```sql
+-- Check database size
+SELECT 
+  table_schema AS 'Database',
+  ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'Size (MB)'
+FROM information_schema.tables
+WHERE table_schema = 'apiIquea'
+GROUP BY table_schema;
+
+-- Check table sizes
+SELECT 
+  table_name AS 'Table',
+  ROUND(((data_length + index_length) / 1024 / 1024), 2) AS 'Size (MB)'
+FROM information_schema.tables
+WHERE table_schema = 'apiIquea'
+ORDER BY (data_length + index_length) DESC;
+
+-- Monitor active connections
+SHOW PROCESSLIST;
+
+-- Check InnoDB status
+SHOW ENGINE INNODB STATUS;
+```
+
+### Monitoring Tools
+
+1. **MySQL Enterprise Monitor** - Official MySQL monitoring
+2. **Percona Monitoring and Management (PMM)** - Free, comprehensive monitoring
+3. **phpMyAdmin** - Web-based administration
+4. **Adminer** - Lightweight database management
+5. **Prometheus + Grafana** - Custom metrics and dashboards
+6. **Datadog** - Cloud-based monitoring
+7. **New Relic** - Application performance monitoring
+
+### Key Metrics to Monitor
+
+- **Connection count**: Current vs. maximum
+- **Query performance**: Slow queries, query time
+- **Buffer pool usage**: Hit ratio should be > 99%
+- **Disk I/O**: Read/write operations
+- **Replication lag**: If using replication
+- **Table locks**: Long-running locks
+- **Deadlocks**: Frequency and causes
+
+### Health Check Query
+
+```sql
+SELECT 1;
+```
+
+Use in application health checks:
+
+```bash
+curl http://localhost:8080/actuator/health | jq '.components.db'
+```
+
+## Security Best Practices
+
+<Warning>
+  Database security is critical. Follow these essential security measures.
+</Warning>
+
+1. **Strong passwords** - Use 16+ character passwords with mixed characters
+2. **Principle of least privilege** - Only grant necessary permissions
+3. **Network security** - Use firewalls to restrict database access
+4. **Encryption in transit** - Enable SSL/TLS for connections
+5. **Encryption at rest** - Enable InnoDB encryption for sensitive data
+6. **Regular updates** - Keep MySQL updated with security patches
+7. **Audit logging** - Enable audit logs for compliance
+8. **Disable remote root** - Never allow remote root access
+9. **Regular backups** - Test backup restoration procedures
+10. **Monitoring** - Monitor for suspicious activity
+
+### Enable SSL/TLS
+
+```sql
+-- Require SSL for user
+ALTER USER 'iquea_user'@'%' REQUIRE SSL;
+```
+
+Configure in application:
+
+```properties
+spring.datasource.url=jdbc:mysql://db-host:3306/apiIquea?useSSL=true&requireSSL=true
+```
+
+## Troubleshooting
+
+### Connection Refused
+
+```bash
+# Check if MySQL is running
+sudo systemctl status mysql
+
+# Check MySQL is listening
+sudo netstat -tlnp | grep 3306
+
+# Test connection
+mysql -u iquea_user -p -h localhost
+```
+
+### Too Many Connections
+
+```sql
+-- Check current connections
+SHOW PROCESSLIST;
+
+-- Kill idle connections
+SELECT CONCAT('KILL ', id, ';') FROM information_schema.processlist 
+WHERE time > 300 AND command = 'Sleep';
+
+-- Increase max_connections
+SET GLOBAL max_connections = 300;
+```
+
+### Slow Queries
+
+```sql
+-- Analyze query
+EXPLAIN SELECT * FROM productos WHERE categoria_id = 1;
+
+-- Check missing indexes
+SHOW INDEX FROM productos;
+
+-- Optimize table
+OPTIMIZE TABLE productos;
+```
+
+### Disk Space Issues
+
+```bash
+# Check database size
+du -sh /var/lib/mysql/apiIquea/
+
+# Check binary logs
+du -sh /var/lib/mysql/mysql-bin.*
+
+# Purge old binary logs
+mysql -u root -p -e "PURGE BINARY LOGS BEFORE DATE_SUB(NOW(), INTERVAL 7 DAY);"
+```

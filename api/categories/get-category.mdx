@@ -1,0 +1,79 @@
+---
+title: "Get Category"
+api: "GET /api/categorias/{nombre}"
+description: "Retrieve a specific category by its name"
+---
+
+## Authentication
+
+This endpoint does not require authentication.
+
+## Path Parameters
+
+<ParamField path="nombre" type="string" required>
+  The name of the category to retrieve
+</ParamField>
+
+## Response
+
+Returns a single category object.
+
+<ResponseField name="categoria_id" type="long">
+  Unique identifier for the category
+</ResponseField>
+
+<ResponseField name="nombre" type="string">
+  Category name
+</ResponseField>
+
+<ResponseField name="slug" type="string">
+  URL-friendly category identifier
+</ResponseField>
+
+<ResponseField name="productos" type="array">
+  List of products in this category
+  <Expandable title="Product Summary">
+    <ResponseField name="producto_id" type="long">
+      Product identifier
+    </ResponseField>
+    <ResponseField name="nombre" type="string">
+      Product name
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Response Example
+
+```json
+{
+  "categoria_id": 1,
+  "nombre": "Electronics",
+  "slug": "electronics",
+  "productos": [
+    {
+      "producto_id": 101,
+      "nombre": "Laptop"
+    },
+    {
+      "producto_id": 102,
+      "nombre": "Smartphone"
+    }
+  ]
+}
+```
+
+## Request Example
+
+```bash
+curl -X GET https://api.iquea.com/api/categorias/Electronics
+```
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Successfully retrieved the category
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Category with the specified name does not exist
+</ResponseField>

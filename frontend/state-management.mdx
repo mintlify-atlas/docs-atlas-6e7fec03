@@ -1,0 +1,542 @@
+---
+title: State Management
+description: React Context-based state management for authentication and shopping cart
+---
+
+# State Management
+
+The Iquea frontend uses React Context API for global state management, providing a lightweight alternative to Redux or other state management libraries.
+
+## State Architecture
+
+The application has two primary context providers:
+
+<CardGroup cols={2}>
+  <Card title="AuthContext" icon="lock" iconType="duotone">
+    Manages user authentication state with JWT tokens
+  </Card>
+  <Card title="CartContext" icon="cart-shopping" iconType="duotone">
+    Manages shopping cart items with localStorage persistence
+  </Card>
+</CardGroup>
+
+## AuthContext
+
+Handles user authentication state, JWT token management, and role-based access.
+
+### Implementation
+
+```typescript src/context/AuthContext.tsx
+import { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import { jwtDecode } from 'jwt-decode';
+
+interface JwtPayload {
+    sub: string;   // email
+    rol: string;
+    exp: number;
+}
+
+interface AuthContextType {
+    token: string | null;
+    email: string | null;
+    rol: string | null;
+    isAuthenticated: boolean;
+    setToken: (token: string | null) => void;
+    logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+    const [token, setTokenState] = useState<string | null>(
+        () => localStorage.getItem('token')
+    );
+
+    const decoded = token ? jwtDecode<JwtPayload>(token) : null;
+    const email = decoded?.sub ?? null;
+    const rol = decoded?.rol ?? null;
+    const isAuthenticated = !!token && (decoded?.exp ?? 0) > Date.now() / 1000;
+
+    function setToken(newToken: string | null) {
+        if (newToken) {
+            localStorage.setItem('token', newToken);
+        } else {
+            localStorage.removeItem('token');
+        }
+        setTokenState(newToken);
+    }
+
+    function logout() {
+        setToken(null);
+    }
+
+    // Clean up expired token on mount
+    useEffect(() => {
+        if (token && (decoded?.exp ?? 0) < Date.now() / 1000) {
+            logout();
+        }
+    }, []);
+
+    return (
+        <AuthContext.Provider value={{ token, email, rol, isAuthenticated, setToken, logout }}>
+            {children}
+        </AuthContext.Provider>
+    );
+}
+
+export function useAuth() {
+    const ctx = useContext(AuthContext);
+    if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+    return ctx;
+}
+```
+
+### Context API
+
+<ParamField path="token" type="string | null">
+  The raw JWT token string from localStorage
+</ParamField>
+
+<ParamField path="email" type="string | null">
+  User's email extracted from JWT payload (`sub` claim)
+</ParamField>
+
+<ParamField path="rol" type="string | null">
+  User's role (e.g., "ADMIN" or "CLIENTE") from JWT payload
+</ParamField>
+
+<ParamField path="isAuthenticated" type="boolean">
+  `true` if token exists and is not expired
+</ParamField>
+
+<ParamField path="setToken" type="(token: string | null) => void">
+  Sets the JWT token in state and localStorage
+</ParamField>
+
+<ParamField path="logout" type="() => void">
+  Removes token from state and localStorage
+</ParamField>
+
+### Usage Examples
+
+<Tabs>
+  <Tab title="Login Flow">
+    ```typescript src/pages/Login.tsx
+    import { useAuth } from '../context/AuthContext';
+    import { login } from '../api/auth';
+    import { useNavigate } from 'react-router-dom';
+    
+    function Login() {
+      const { setToken } = useAuth();
+      const navigate = useNavigate();
+      const [credentials, setCredentials] = useState({ email: '', password: '' });
+    
+      async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        try {
+          const { token } = await login(credentials);
+          setToken(token);  // Save token to context and localStorage
+          navigate('/');    // Redirect to home
+        } catch (error) {
+          console.error('Login failed:', error);
+        }
+      }
+    
+      return (
+        <form onSubmit={handleSubmit}>
+          {/* Form fields */}
+        </form>
+      );
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Conditional Rendering">
+    ```typescript src/components/Navbar.tsx
+    import { useAuth } from '../context/AuthContext';
+    import { Link } from 'react-router-dom';
+    
+    function Navbar() {
+      const { isAuthenticated, logout, email } = useAuth();
+    
+      return (
+        <nav>
+          {isAuthenticated ? (
+            <>
+              <span>Welcome, {email}</span>
+              <button onClick={logout}>Logout</button>
+              <Link to="/carrito">Cart</Link>
+            </>
+          ) : (
+            <Link to="/login">Login</Link>
+          )}
+        </nav>
+      );
+    }
+    ```
+  </Tab>
+  
+  <Tab title="API Calls with Auth">
+    ```typescript src/api/client.ts
+    function getToken(): string | null {
+        return localStorage.getItem('token');
+    }
+    
+    function authHeaders(): HeadersInit {
+        const token = getToken();
+        return {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        };
+    }
+    
+    export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+        const res = await fetch(`${BASE_URL}${path}`, {
+            ...options,
+            headers: {
+                ...authHeaders(),  // Automatically includes token
+                ...(options.headers ?? {}),
+            },
+        });
+        // Handle response...
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### JWT Token Management
+
+The AuthContext uses `jwt-decode` to extract claims from the JWT:
+
+```typescript
+import { jwtDecode } from 'jwt-decode';
+
+interface JwtPayload {
+    sub: string;   // Email (subject)
+    rol: string;   // User role
+    exp: number;   // Expiration timestamp
+}
+
+const decoded = token ? jwtDecode<JwtPayload>(token) : null;
+const isAuthenticated = !!token && (decoded?.exp ?? 0) > Date.now() / 1000;
+```
+
+<Warning>
+**Token Expiration**: The context automatically checks if the token is expired and clears it on mount. However, it doesn't actively monitor expiration during the session. Consider adding periodic checks or handling 401 responses.
+</Warning>
+
+## CartContext
+
+Manages shopping cart state with localStorage persistence.
+
+### Implementation
+
+```typescript src/context/CartContext.tsx
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import type { Producto, CartItem } from '../types';
+
+interface CartContextType {
+    cart: CartItem[];
+    addToCart: (product: Producto, quantity: number) => void;
+    removeFromCart: (productId: number) => void;
+    updateQuantity: (productId: number, quantity: number) => void;
+    clearCart: () => void;
+    total: number;
+    count: number;
+}
+
+const CartContext = createContext<CartContextType | undefined>(undefined);
+
+export function CartProvider({ children }: { children: ReactNode }) {
+    const [cart, setCart] = useState<CartItem[]>(() => {
+        const saved = localStorage.getItem('cart');
+        return saved ? JSON.parse(saved) : [];
+    });
+
+    // Persist to localStorage on every change
+    useEffect(() => {
+        localStorage.setItem('cart', JSON.stringify(cart));
+    }, [cart]);
+
+    const addToCart = (product: Producto, quantity: number) => {
+        setCart((prev) => {
+            const existing = prev.find((item) => item.producto.producto_id === product.producto_id);
+            if (existing) {
+                // Update quantity if product already in cart
+                return prev.map((item) =>
+                    item.producto.producto_id === product.producto_id
+                        ? { ...item, cantidad: item.cantidad + quantity }
+                        : item
+                );
+            }
+            // Add new product to cart
+            return [...prev, { producto: product, cantidad: quantity }];
+        });
+    };
+
+    const removeFromCart = (productId: number) => {
+        setCart((prev) => prev.filter((item) => item.producto.producto_id !== productId));
+    };
+
+    const updateQuantity = (productId: number, quantity: number) => {
+        if (quantity <= 0) {
+            removeFromCart(productId);
+            return;
+        }
+        setCart((prev) =>
+            prev.map((item) =>
+                item.producto.producto_id === productId ? { ...item, cantidad: quantity } : item
+            )
+        );
+    };
+
+    const clearCart = () => setCart([]);
+
+    const total = cart.reduce((sum, item) => sum + (item.producto.precioCantidad * item.cantidad), 0);
+    const count = cart.reduce((sum, item) => sum + item.cantidad, 0);
+
+    return (
+        <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, total, count }}>
+            {children}
+        </CartContext.Provider>
+    );
+}
+
+export function useCart() {
+    const context = useContext(CartContext);
+    if (context === undefined) {
+        throw new Error('useCart must be used within a CartProvider');
+    }
+    return context;
+}
+```
+
+### Context API
+
+<ParamField path="cart" type="CartItem[]">
+  Array of cart items with product and quantity
+</ParamField>
+
+<ParamField path="addToCart" type="(product: Producto, quantity: number) => void">
+  Adds a product to cart or increments quantity if already present
+</ParamField>
+
+<ParamField path="removeFromCart" type="(productId: number) => void">
+  Removes a product from cart by ID
+</ParamField>
+
+<ParamField path="updateQuantity" type="(productId: number, quantity: number) => void">
+  Updates product quantity. Removes item if quantity ≤ 0
+</ParamField>
+
+<ParamField path="clearCart" type="() => void">
+  Removes all items from cart
+</ParamField>
+
+<ParamField path="total" type="number">
+  Total cart value (sum of all items × quantity)
+</ParamField>
+
+<ParamField path="count" type="number">
+  Total number of items in cart
+</ParamField>
+
+### Type Definitions
+
+```typescript src/types/index.ts
+export interface CartItem {
+    producto: Producto;
+    cantidad: number;
+}
+
+export interface Producto {
+    producto_id: number;
+    sku: string;
+    nombre: string;
+    descripcion: string;
+    precioCantidad: number;
+    precioMoneda: string;
+    dimensionesAlto: number;
+    dimensionesAncho: number;
+    dimensionesProfundo: number;
+    es_destacado: boolean;
+    stock: number;
+    imagen_url: string;
+    categoria: CategoriaResumen;
+}
+```
+
+### Usage Examples
+
+<Tabs>
+  <Tab title="Add to Cart">
+    ```typescript src/pages/ProductDetail.tsx
+    import { useCart } from '../context/CartContext';
+    import { useState } from 'react';
+    
+    function ProductDetail({ producto }: { producto: Producto }) {
+      const { addToCart } = useCart();
+      const [quantity, setQuantity] = useState(1);
+    
+      function handleAddToCart() {
+        addToCart(producto, quantity);
+        // Show success message
+      }
+    
+      return (
+        <div>
+          <h1>{producto.nombre}</h1>
+          <input
+            type="number"
+            min="1"
+            max={producto.stock}
+            value={quantity}
+            onChange={(e) => setQuantity(Number(e.target.value))}
+          />
+          <button onClick={handleAddToCart}>Add to Cart</button>
+        </div>
+      );
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Cart Page">
+    ```typescript src/pages/Cart.tsx
+    import { useCart } from '../context/CartContext';
+    
+    function Cart() {
+      const { cart, updateQuantity, removeFromCart, total, clearCart } = useCart();
+    
+      if (cart.length === 0) {
+        return <p>Your cart is empty</p>;
+      }
+    
+      return (
+        <div>
+          <h1>Shopping Cart</h1>
+          {cart.map((item) => (
+            <div key={item.producto.producto_id}>
+              <h3>{item.producto.nombre}</h3>
+              <input
+                type="number"
+                value={item.cantidad}
+                onChange={(e) => updateQuantity(item.producto.producto_id, Number(e.target.value))}
+              />
+              <button onClick={() => removeFromCart(item.producto.producto_id)}>
+                Remove
+              </button>
+              <p>Subtotal: {item.producto.precioCantidad * item.cantidad} EUR</p>
+            </div>
+          ))}
+          <p>Total: {total.toFixed(2)} EUR</p>
+          <button onClick={clearCart}>Clear Cart</button>
+        </div>
+      );
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Cart Badge">
+    ```typescript src/components/Navbar.tsx
+    import { useCart } from '../context/CartContext';
+    import { Link } from 'react-router-dom';
+    
+    function Navbar() {
+      const { count } = useCart();
+    
+      return (
+        <nav>
+          <Link to="/carrito">
+            Cart
+            {count > 0 && <span className="badge">{count}</span>}
+          </Link>
+        </nav>
+      );
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### LocalStorage Persistence
+
+The cart automatically persists to localStorage:
+
+```typescript
+// Initialize from localStorage
+const [cart, setCart] = useState<CartItem[]>(() => {
+    const saved = localStorage.getItem('cart');
+    return saved ? JSON.parse(saved) : [];
+});
+
+// Save to localStorage on every change
+useEffect(() => {
+    localStorage.setItem('cart', JSON.stringify(cart));
+}, [cart]);
+```
+
+This provides:
+- **Persistence** - Cart survives page refreshes
+- **Cross-tab sync** - Cart updates across browser tabs (with additional event listeners)
+- **Offline support** - Cart data available without network
+
+## Context Provider Hierarchy
+
+The contexts are nested in `App.tsx` to ensure proper availability:
+
+```typescript
+<AuthProvider>           {/* Outermost - available everywhere */}
+  <CartProvider>         {/* Can access AuthContext if needed */}
+    <BrowserRouter>
+      {/* All routes have access to both contexts */}
+    </BrowserRouter>
+  </CartProvider>
+</AuthProvider>
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Context Composition">
+    Keep contexts focused on a single concern:
+    - AuthContext handles authentication only
+    - CartContext handles cart operations only
+    - Avoid creating one mega-context
+  </Accordion>
+
+  <Accordion title="Error Handling">
+    Both contexts throw errors if used outside their providers:
+    ```typescript
+    export function useAuth() {
+      const ctx = useContext(AuthContext);
+      if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+      return ctx;
+    }
+    ```
+    This prevents undefined context bugs.
+  </Accordion>
+
+  <Accordion title="Type Safety">
+    All context values are strictly typed:
+    ```typescript
+    interface AuthContextType {
+      token: string | null;
+      email: string | null;
+      // ...
+    }
+    ```
+    TypeScript ensures correct usage throughout the app.
+  </Accordion>
+
+  <Accordion title="Performance">
+    - Use separate contexts to avoid unnecessary re-renders
+    - Cart calculations (total, count) are computed values, not stored state
+    - Consider memoization for expensive computations
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<Card title="API Integration" icon="plug" href="./api-integration">
+  Learn how the frontend communicates with the backend API using authenticated requests
+</Card>

@@ -1,0 +1,175 @@
+---
+title: "Search Products"
+api: "GET /api/productos/buscar"
+description: "Search for products by name"
+---
+
+## Authentication
+
+This endpoint is publicly accessible and does not require authentication.
+
+## Query Parameters
+
+<ParamField query="nombre" type="string" required>
+  Search term to filter products by name. Returns products whose names contain this string (case-insensitive partial match).
+</ParamField>
+
+## Response
+
+Returns an array of product objects matching the search criteria.
+
+<ResponseField name="productos" type="array">
+  Array of product objects matching the search term
+  
+  <Expandable title="Product Object">
+    <ResponseField name="producto_id" type="long">
+      Unique identifier for the product
+    </ResponseField>
+    
+    <ResponseField name="sku" type="string">
+      Stock Keeping Unit
+    </ResponseField>
+    
+    <ResponseField name="nombre" type="string">
+      Product name
+    </ResponseField>
+    
+    <ResponseField name="descripcion" type="string">
+      Product description
+    </ResponseField>
+    
+    <ResponseField name="precioCantidad" type="decimal">
+      Price amount
+    </ResponseField>
+    
+    <ResponseField name="precioMoneda" type="string">
+      Currency code
+    </ResponseField>
+    
+    <ResponseField name="dimensionesAlto" type="double">
+      Height dimension
+    </ResponseField>
+    
+    <ResponseField name="dimensionesAncho" type="double">
+      Width dimension
+    </ResponseField>
+    
+    <ResponseField name="dimensionesProfundo" type="double">
+      Depth dimension
+    </ResponseField>
+    
+    <ResponseField name="es_destacado" type="boolean">
+      Featured status
+    </ResponseField>
+    
+    <ResponseField name="stock" type="integer">
+      Available quantity
+    </ResponseField>
+    
+    <ResponseField name="imagen_url" type="string">
+      Product image URL
+    </ResponseField>
+    
+    <ResponseField name="categoria" type="object">
+      Category information
+      
+      <Expandable title="Category Object">
+        <ResponseField name="categoria_id" type="long">
+          Category unique identifier
+        </ResponseField>
+        
+        <ResponseField name="nombre" type="string">
+          Category name
+        </ResponseField>
+        
+        <ResponseField name="slug" type="string">
+          URL-friendly category identifier
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl --location 'https://api.iquea.com/api/productos/buscar?nombre=mesa'
+```
+
+```javascript JavaScript
+const searchTerm = 'mesa';
+
+fetch(`https://api.iquea.com/api/productos/buscar?nombre=${encodeURIComponent(searchTerm)}`)
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+
+```python Python
+import requests
+
+search_term = 'mesa'
+url = 'https://api.iquea.com/api/productos/buscar'
+params = {'nombre': search_term}
+
+response = requests.get(url, params=params)
+products = response.json()
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+[
+  {
+    "producto_id": 1,
+    "sku": "IKEA-TABLE-001",
+    "nombre": "Mesa de Comedor Moderna",
+    "descripcion": "Mesa de comedor elegante con acabado en roble",
+    "precioCantidad": 299.99,
+    "precioMoneda": "USD",
+    "dimensionesAlto": 75.0,
+    "dimensionesAncho": 180.0,
+    "dimensionesProfundo": 90.0,
+    "es_destacado": true,
+    "stock": 15,
+    "imagen_url": "https://images.iquea.com/mesa-comedor-001.jpg",
+    "categoria": {
+      "categoria_id": 3,
+      "nombre": "Mesas",
+      "slug": "mesas"
+    }
+  },
+  {
+    "producto_id": 42,
+    "sku": "IKEA-TABLE-042",
+    "nombre": "Mesa de Café Redonda",
+    "descripcion": "Mesa de café compacta ideal para espacios pequeños",
+    "precioCantidad": 129.99,
+    "precioMoneda": "USD",
+    "dimensionesAlto": 45.0,
+    "dimensionesAncho": 90.0,
+    "dimensionesProfundo": 90.0,
+    "es_destacado": false,
+    "stock": 8,
+    "imagen_url": "https://images.iquea.com/mesa-cafe-042.jpg",
+    "categoria": {
+      "categoria_id": 3,
+      "nombre": "Mesas",
+      "slug": "mesas"
+    }
+  }
+]
+```
+
+```json 200 - Empty Results
+[]
+```
+</ResponseExample>
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Successfully retrieved matching products (may be an empty array if no matches found)
+</ResponseField>
+
+<Info>
+  The search performs a case-insensitive partial match. Searching for "mesa" will match "Mesa de Comedor", "MESA DE CAFÉ", etc.
+</Info>

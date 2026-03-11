@@ -1,0 +1,502 @@
+---
+title: Admin Panel
+description: Manage products, categories, orders, and inventory as an administrator in Iquea Commerce
+---
+
+## Overview
+
+Administrators have elevated permissions to manage the entire Iquea Commerce platform. This guide covers admin-specific features for product management, category organization, order processing, and inventory control.
+
+<Warning>
+Admin features are only accessible to users with role `ADMIN`. Regular customers with role `CLIENTE` do not have access to these functions.
+</Warning>
+
+## Admin Authentication
+
+Admin users authenticate through the same login system but have elevated privileges:
+
+### User Roles
+
+| Role | Description | Permissions |
+|------|-------------|-------------|
+| **CLIENTE** | Regular customer | Browse, purchase, view own orders |
+| **ADMIN** | Administrator | Full CRUD on products, categories, view all orders |
+
+<Note>
+Admin status is determined by the `rol` field in the user account. This is set at the database level and cannot be self-assigned.
+</Note>
+
+## Managing Products
+
+Administrators have full control over the product catalog through dedicated endpoints.
+
+### Viewing All Products
+
+<Steps>
+  <Step title="Access Product List">
+    Navigate to the admin product management section
+  </Step>
+
+  <Step title="View Product Grid">
+    All products are displayed with:
+    - Product ID and SKU
+    - Name and description
+    - Category assignment
+    - Price (amount and currency)
+    - Dimensions (height × width × depth)
+    - Featured status (`es_destacado`)
+    - Current stock level
+    - Product image
+  </Step>
+
+  <Step title="Filter and Search">
+    Use admin filters to find products:
+    - Search by name
+    - Filter by category
+    - Filter by price range
+    - Filter by SKU
+    - Show only featured products
+  </Step>
+</Steps>
+
+### Creating New Products
+
+Add new items to the product catalog:
+
+<Steps>
+  <Step title="Open Create Product Form">
+    Click **"Add New Product"** or **"Crear Producto"**
+  </Step>
+
+  <Step title="Fill Required Fields">
+    Complete all required product information:
+    
+    **Basic Information**
+    - **SKU**: Unique stock keeping unit code
+    - **Name** (`nombre`): Product name
+    - **Description** (`descripcion`): Detailed product description
+    
+    **Pricing**
+    - **Price Amount** (`precioCantidad`): Numeric price value
+    - **Currency** (`precioMoneda`): Currency symbol (e.g., "€")
+    
+    **Dimensions**
+    - **Height** (`dimensionesAlto`): Height in cm
+    - **Width** (`dimensionesAncho`): Width in cm
+    - **Depth** (`dimensionesProfundo`): Depth in cm
+    
+    **Inventory**
+    - **Stock**: Number of units available
+    - **Featured** (`es_destacado`): Mark as featured product
+    
+    **Media**
+    - **Image URL** (`imagen_url`): Product image URL
+    
+    **Categorization**
+    - **Category**: Select product category
+  </Step>
+
+  <Step title="Submit Product">
+    Click **"Create"** to submit:
+    - POST request to `/api/productos`
+    - Product is validated and saved
+    - Returns created product with assigned ID
+  </Step>
+
+  <Step title="Verify Creation">
+    New product appears in product list and is immediately available to customers
+  </Step>
+</Steps>
+
+<Note>
+The SKU must be unique across all products. Duplicate SKUs will cause creation to fail.
+</Note>
+
+### Updating Products
+
+Modify existing product information:
+
+<Steps>
+  <Step title="Select Product to Edit">
+    Click **"Edit"** on any product in the admin product list
+  </Step>
+
+  <Step title="Modify Fields">
+    Update any product fields:
+    - Change price
+    - Update stock levels
+    - Toggle featured status
+    - Modify description
+    - Update dimensions
+    - Change category
+    - Update image URL
+  </Step>
+
+  <Step title="Save Changes">
+    Click **"Update"** or **"Save"**:
+    - PUT request to `/api/productos/sku/{sku}`
+    - Product is validated and updated
+    - Changes are immediately reflected
+  </Step>
+</Steps>
+
+<Warning>
+Updating product prices does NOT affect existing orders. Orders lock prices at the time of purchase.
+</Warning>
+
+### Deleting Products
+
+Remove products from the catalog:
+
+<Steps>
+  <Step title="Select Product">
+    Find the product you want to delete
+  </Step>
+
+  <Step title="Click Delete">
+    Click **"Delete"** or trash icon button
+  </Step>
+
+  <Step title="Confirm Deletion">
+    Confirm the deletion action in the dialog:
+    - DELETE request to `/api/productos/{id}`
+    - Product is permanently removed
+  </Step>
+
+  <Step title="Verify Removal">
+    Product no longer appears in catalog or search results
+  </Step>
+</Steps>
+
+<Warning>
+Deleting products may affect existing orders that reference them. Consider marking products as out of stock instead of deletion.
+</Warning>
+
+## Managing Categories
+
+Organize products into logical categories for better navigation.
+
+### Viewing All Categories
+
+Access the category management interface:
+
+- View list of all categories
+- See category name and slug
+- Check number of products per category
+
+### Creating Categories
+
+<Steps>
+  <Step title="Open Create Category Form">
+    Click **"Add Category"** or **"Nueva Categoría"**
+  </Step>
+
+  <Step title="Enter Category Details">
+    Fill in:
+    - **Name** (`nombre`): Display name (e.g., "Salón", "Dormitorio")
+    - **Slug**: URL-friendly identifier (e.g., "salon", "dormitorio")
+  </Step>
+
+  <Step title="Submit Category">
+    Click **"Create"**:
+    - POST request to `/api/categorias`
+    - Category is created and available for product assignment
+  </Step>
+</Steps>
+
+### Updating Categories
+
+Modify existing category information:
+
+<Steps>
+  <Step title="Select Category">
+    Click **"Edit"** on a category
+  </Step>
+
+  <Step title="Update Fields">
+    Change name or slug
+  </Step>
+
+  <Step title="Save Changes">
+    Submit update:
+    - PUT request to `/api/categorias/{nombre}`
+    - Category is updated
+    - All products in category reflect new name
+  </Step>
+</Steps>
+
+### Deleting Categories
+
+<Steps>
+  <Step title="Select Category">
+    Choose category to delete
+  </Step>
+
+  <Step title="Delete Category">
+    Click delete:
+    - DELETE request to `/api/categorias/{nombre}`
+    - Category is removed
+  </Step>
+</Steps>
+
+<Warning>
+Deleting a category may leave products without category assignment. Reassign products before deleting categories.
+</Warning>
+
+## Viewing All Orders
+
+Administrators can view and manage all customer orders.
+
+### Order Management Interface
+
+<Steps>
+  <Step title="Access Order Dashboard">
+    Navigate to **"Orders"** or **"Pedidos"** in the admin panel
+  </Step>
+
+  <Step title="View All Orders">
+    Unlike customers who see only their orders, admins see:
+    - All orders from all customers
+    - Order reference codes
+    - Customer information
+    - Order dates
+    - Current status
+    - Order totals
+  </Step>
+
+  <Step title="Filter Orders">
+    Use filters to find specific orders:
+    - **By Status**: GET `/api/pedidos/estado/{estado}`
+    - **By Customer**: Filter by user ID
+    - **By Date**: Filter by creation date range
+    - **By Reference**: Search by reference code
+  </Step>
+</Steps>
+
+### Updating Order Status
+
+Admins can manually change order status:
+
+<Steps>
+  <Step title="Select Order">
+    Click on an order to view details
+  </Step>
+
+  <Step title="Change Status">
+    Select new status from dropdown or buttons:
+    - `PENDIENTE` → `CONFIRMADO`
+    - `CONFIRMADO` → `ENVIADO`
+    - `ENVIADO` → `ENTREGADO`
+    - Any status → `CANCELADO`
+  </Step>
+
+  <Step title="Save Status Change">
+    Submit update:
+    - PUT request to `/api/pedidos/{id}`
+    - Order status is updated
+    - Customer sees new status
+  </Step>
+</Steps>
+
+### Viewing Order Details
+
+Admins have full access to all order information:
+
+- Complete customer information
+- All line items with products
+- Pricing details (unit price, quantity, subtotals)
+- Order history and status changes
+- Shipping information
+
+### Modifying Orders
+
+Admins can update order details:
+
+<Steps>
+  <Step title="Open Order Editor">
+    Select order and click edit
+  </Step>
+
+  <Step title="Modify Order Details">
+    Make changes:
+    - Add items: POST `/api/pedidos/{id}/detalles`
+    - Remove items: DELETE `/api/detalles/{id}`
+    - Update quantities: PUT `/api/detalles/{id}/cantidad?cantidad={qty}`
+  </Step>
+
+  <Step title="Recalculate Total">
+    Order total updates automatically based on detail changes
+  </Step>
+</Steps>
+
+<Warning>
+Modifying orders after confirmation may confuse customers. Consider cancelling and creating a new order instead.
+</Warning>
+
+### Deleting Orders
+
+Admins can permanently delete orders:
+
+- Click delete on order
+- Confirm deletion
+- DELETE request to `/api/pedidos/{id}`
+- Order and all details are removed
+
+<Note>
+Deletion is permanent and cannot be undone. Use cancellation status instead when possible.
+</Note>
+
+## Inventory Management
+
+Control product stock levels and availability.
+
+### Updating Stock Levels
+
+<Steps>
+  <Step title="Navigate to Product">
+    Find product in admin product list
+  </Step>
+
+  <Step title="Edit Stock Field">
+    Update the `stock` field with new inventory count
+  </Step>
+
+  <Step title="Save Changes">
+    Submit product update:
+    - Stock level is updated immediately
+    - Products with stock = 0 show as "Agotado" to customers
+  </Step>
+</Steps>
+
+### Stock Visibility
+
+- **Stock > 0**: Product available for purchase, shows "X unidades"
+- **Stock = 0**: Product shows as "Agotado", cannot be added to cart
+
+### Bulk Stock Updates
+
+For updating multiple products:
+
+1. Use product filters to find items needing updates
+2. Update each product individually via API
+3. Consider batch import/export for large inventory changes
+
+<Note>
+The platform does not currently have automated stock deduction on order placement. Admins must manually adjust inventory after processing orders.
+</Note>
+
+## Product Search and Filtering
+
+Admins have access to advanced search endpoints:
+
+### Available Search Methods
+
+| Endpoint | Description | Example |
+|----------|-------------|----------|
+| `/api/productos/buscar?nombre={text}` | Search by name | `nombre=sofá` |
+| `/api/productos/precio?min={min}&max={max}` | Filter by price range | `min=100&max=1000` |
+| `/api/productos/sku/{sku}` | Find by SKU | `sku=SOFA-001` |
+| `/api/productos/destacados` | Get featured products | - |
+| `/api/productos/categoria/{id}` | Filter by category | `categoria/5` |
+
+## Admin Best Practices
+
+<Card title="Verify Before Deletion" icon="shield-check">
+  Always verify that products/categories are not actively referenced before deletion. Check for existing orders.
+</Card>
+
+<Card title="Maintain Stock Accuracy" icon="boxes">
+  Regularly update stock levels to reflect actual inventory. Set stock to 0 for unavailable items rather than deleting.
+</Card>
+
+<Card title="Use Featured Products Strategically" icon="star">
+  Mark high-quality or promotional items as featured. Limit to 6-8 products for optimal homepage display.
+</Card>
+
+<Card title="Process Orders Promptly" icon="clock">
+  Update order statuses in a timely manner so customers can track their purchases accurately.
+</Card>
+
+<Card title="Maintain Category Structure" icon="folder">
+  Keep category names consistent and logical. Use singular or plural consistently across all categories.
+</Card>
+
+## Security Considerations
+
+### Role-Based Access
+
+Admin functions are protected:
+
+- Backend validates user role before allowing admin operations
+- JWT tokens include role information
+- Unauthorized access returns 403 Forbidden
+
+### Data Validation
+
+All admin operations validate:
+
+- Required fields are present
+- Data types are correct
+- Unique constraints (SKU, category names)
+- Referential integrity (categories exist)
+
+<Warning>
+Never share admin credentials. Use individual admin accounts with proper role assignments for accountability.
+</Warning>
+
+## API Reference Summary
+
+### Product Endpoints (Admin)
+
+- `POST /api/productos` - Create product
+- `PUT /api/productos/sku/{sku}` - Update product by SKU
+- `DELETE /api/productos/{id}` - Delete product
+
+### Category Endpoints (Admin)
+
+- `POST /api/categorias` - Create category
+- `PUT /api/categorias/{nombre}` - Update category
+- `DELETE /api/categorias/{nombre}` - Delete category
+
+### Order Endpoints (Admin)
+
+- `GET /api/pedidos` - List all orders
+- `GET /api/pedidos/estado/{estado}` - Filter by status
+- `PUT /api/pedidos/{id}` - Update order
+- `DELETE /api/pedidos/{id}` - Delete order
+- `POST /api/pedidos/{id}/detalles` - Add order detail
+- `DELETE /api/detalles/{id}` - Remove order detail
+- `PUT /api/detalles/{id}/cantidad` - Update detail quantity
+
+## Troubleshooting
+
+### Cannot Access Admin Features
+
+**Problem**: Admin options not visible
+
+**Solution**: Verify your account has `rol: ADMIN`. Contact a system administrator to update your role.
+
+### Product Creation Fails
+
+**Problem**: Cannot create new product
+
+**Common Causes**:
+- Duplicate SKU (must be unique)
+- Missing required fields
+- Invalid category reference
+- Malformed image URL
+
+### Order Status Won't Update
+
+**Problem**: Order status update fails
+
+**Solutions**:
+- Verify order exists
+- Check status is valid enum value
+- Ensure you have admin permissions
+
+## Related Guides
+
+- [Shopping Guide](/user-guides/shopping) - Customer shopping experience
+- [Cart and Checkout](/user-guides/cart-checkout) - Checkout process that creates orders
+- [Order Management](/user-guides/order-management) - Customer order viewing

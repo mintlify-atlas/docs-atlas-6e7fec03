@@ -1,0 +1,57 @@
+---
+title: "Delete Order"
+api: "DELETE /api/pedidos/{id}"
+---
+
+Deletes an order from the system. This endpoint is typically restricted to admin users only.
+
+## Authentication
+
+Requires JWT token with admin privileges in the Authorization header.
+
+```bash
+Authorization: Bearer YOUR_ADMIN_JWT_TOKEN
+```
+
+<Warning>
+This endpoint requires **admin-level permissions**. Standard authenticated users cannot delete orders.
+</Warning>
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | Long | Yes | Order ID to delete |
+
+## Response
+
+Returns no content on successful deletion.
+
+### Response Body
+
+Empty response body (204 No Content).
+
+## Example Request
+
+```bash
+curl -X DELETE "https://api.iquea.com/api/pedidos/42" \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| 204 | No Content - Order successfully deleted |
+| 401 | Unauthorized - Invalid or missing token |
+| 403 | Forbidden - User does not have admin privileges |
+| 404 | Order not found |
+| 500 | Internal server error |
+
+## Notes
+
+- This is a destructive operation and cannot be undone
+- Consider implementing soft deletes or order cancellation instead
+- All associated order line items (detalles) will also be deleted
+- Audit logs should track order deletions for compliance

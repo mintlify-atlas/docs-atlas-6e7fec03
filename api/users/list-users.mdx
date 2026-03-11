@@ -1,0 +1,125 @@
+---
+title: "List Users"
+api: "GET /api/usuarios"
+description: "Retrieve a list of all users in the system"
+---
+
+## Authentication
+
+**Required:** Admin only
+
+This endpoint requires administrator privileges. Include a valid JWT token in the Authorization header.
+
+## Request
+
+No parameters required.
+
+```bash
+curl -X GET https://api.iquea.com/api/usuarios \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+## Response
+
+Returns an array of user objects.
+
+<ResponseField name="users" type="array">
+  Array of user objects
+
+  <Expandable title="User Object">
+    <ResponseField name="usuario_id" type="long">
+      Unique identifier for the user
+    </ResponseField>
+
+    <ResponseField name="username" type="string">
+      User's unique username (max 100 characters)
+    </ResponseField>
+
+    <ResponseField name="email" type="object">
+      User's email address (unique across the system)
+    </ResponseField>
+
+    <ResponseField name="nombre" type="string">
+      User's first name (max 100 characters)
+    </ResponseField>
+
+    <ResponseField name="apellidos" type="string">
+      User's last name(s) (max 150 characters)
+    </ResponseField>
+
+    <ResponseField name="rol" type="enum">
+      User role. Possible values:
+      - `ADMIN` - Administrator with full access
+      - `CLIENTE` - Regular customer (default)
+    </ResponseField>
+
+    <ResponseField name="direccion_envio" type="string">
+      User's shipping address
+    </ResponseField>
+
+    <ResponseField name="fecha_nacimiento" type="date">
+      User's date of birth (ISO 8601 format: YYYY-MM-DD)
+    </ResponseField>
+
+    <ResponseField name="activo" type="boolean">
+      Whether the user account is active
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+```json
+[
+  {
+    "usuario_id": 1,
+    "username": "johndoe",
+    "email": {
+      "value": "john@example.com"
+    },
+    "nombre": "John",
+    "apellidos": "Doe Smith",
+    "rol": "CLIENTE",
+    "direccion_envio": "123 Main St, Madrid, Spain",
+    "fecha_nacimiento": "1990-05-15",
+    "activo": true
+  },
+  {
+    "usuario_id": 2,
+    "username": "admin",
+    "email": {
+      "value": "admin@iquea.com"
+    },
+    "nombre": "Admin",
+    "apellidos": "User",
+    "rol": "ADMIN",
+    "direccion_envio": "456 Admin Blvd, Barcelona, Spain",
+    "fecha_nacimiento": "1985-03-20",
+    "activo": true
+  }
+]
+```
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Successfully retrieved list of users
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid authentication token
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  User does not have admin privileges
+</ResponseField>
+
+## Security Notes
+
+<Warning>
+  **Password Protection:** User passwords are never included in API responses. The `password` field is stored securely in the database but excluded from all DTO responses.
+</Warning>
+
+<Info>
+  This endpoint returns all users in the system. For privacy and security reasons, ensure this endpoint is restricted to administrators only.
+</Info>

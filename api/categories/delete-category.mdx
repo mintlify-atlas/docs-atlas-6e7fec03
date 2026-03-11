@@ -1,0 +1,54 @@
+---
+title: "Delete Category"
+api: "DELETE /api/categorias/{nombre}"
+description: "Delete a product category"
+---
+
+## Authentication
+
+**Admin only** - This endpoint requires admin authentication.
+
+Include an Authorization header with a valid admin bearer token:
+
+```
+Authorization: Bearer YOUR_ADMIN_TOKEN
+```
+
+## Path Parameters
+
+<ParamField path="nombre" type="string" required>
+  The name of the category to delete
+</ParamField>
+
+## Response
+
+This endpoint returns no content on success (HTTP 204).
+
+## Request Example
+
+```bash
+curl -X DELETE https://api.iquea.com/api/categorias/Electronics \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+## Status Codes
+
+<ResponseField name="204" type="No Content">
+  Category successfully deleted
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid authentication token
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  User does not have admin permissions
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Category with the specified name does not exist
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Category cannot be deleted (e.g., has associated products)
+</ResponseField>
