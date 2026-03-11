@@ -1,0 +1,183 @@
+{
+  "projectType": "saas",
+  "projectName": "Iquea Commerce",
+  "projectDescription": "A modern full-stack e-commerce platform for furniture retail with React frontend, Spring Boot backend, and complete order management",
+  "theme": "almond",
+  "primaryColor": "#aa125e",
+  "lightColor": "#420a53",
+  "darkColor": "#f4ecf2",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "introduction",
+              "features",
+              "architecture"
+            ]
+          },
+          {
+            "group": "Getting Started",
+            "pages": [
+              "getting-started/prerequisites",
+              "getting-started/installation",
+              "getting-started/configuration",
+              "getting-started/running-the-app"
+            ]
+          },
+          {
+            "group": "Frontend Guide",
+            "pages": [
+              "frontend/overview",
+              "frontend/components",
+              "frontend/routing",
+              "frontend/state-management",
+              "frontend/api-integration"
+            ]
+          },
+          {
+            "group": "Backend Guide",
+            "pages": [
+              "backend/overview",
+              "backend/architecture",
+              "backend/domain-model",
+              "backend/security",
+              "backend/database"
+            ]
+          },
+          {
+            "group": "User Guides",
+            "pages": [
+              "user-guides/shopping",
+              "user-guides/cart-checkout",
+              "user-guides/order-management",
+              "user-guides/admin-panel"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Authentication",
+            "pages": [
+              "api/auth/login",
+              "api/auth/register"
+            ]
+          },
+          {
+            "group": "Products",
+            "pages": [
+              "api/products/list-products",
+              "api/products/get-product",
+              "api/products/create-product",
+              "api/products/update-product",
+              "api/products/delete-product",
+              "api/products/search-products",
+              "api/products/featured-products"
+            ]
+          },
+          {
+            "group": "Categories",
+            "pages": [
+              "api/categories/list-categories",
+              "api/categories/get-category",
+              "api/categories/create-category",
+              "api/categories/update-category",
+              "api/categories/delete-category"
+            ]
+          },
+          {
+            "group": "Orders",
+            "pages": [
+              "api/orders/list-orders",
+              "api/orders/get-order",
+              "api/orders/create-order",
+              "api/orders/update-order",
+              "api/orders/delete-order",
+              "api/orders/orders-by-status"
+            ]
+          },
+          {
+            "group": "Users",
+            "pages": [
+              "api/users/list-users",
+              "api/users/get-user",
+              "api/users/update-user",
+              "api/users/delete-user"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Contributing",
+            "pages": [
+              "development/contributing",
+              "development/code-style",
+              "development/testing"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/frontend",
+              "deployment/backend",
+              "deployment/database"
+            ]
+          },
+          {
+            "group": "Troubleshooting",
+            "pages": [
+              "troubleshooting/common-issues",
+              "troubleshooting/database-errors",
+              "troubleshooting/cors-issues"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "JWT-based authentication and authorization",
+    "Product catalog with search and filtering",
+    "Shopping cart and checkout flow",
+    "Order management with status tracking",
+    "Admin panel for inventory management",
+    "Responsive React frontend with TypeScript",
+    "RESTful API with Spring Boot",
+    "MySQL database with JPA/Hibernate",
+    "Role-based access control (Admin/Customer)",
+    "Real-time stock management"
+  ],
+  "publicApiSurface": [
+    "POST /api/auth/login",
+    "POST /api/auth/registro",
+    "GET /api/productos",
+    "GET /api/productos/{id}",
+    "GET /api/productos/sku/{sku}",
+    "GET /api/productos/precio",
+    "GET /api/productos/buscar",
+    "GET /api/productos/destacados",
+    "POST /api/productos",
+    "PUT /api/productos/sku/{sku}",
+    "DELETE /api/productos/{id}",
+    "GET /api/categorias",
+    "GET /api/categorias/{nombre}",
+    "POST /api/categorias",
+    "PUT /api/categorias/{nombre}",
+    "DELETE /api/categorias/{nombre}",
+    "GET /api/pedidos",
+    "GET /api/pedidos/{id}",
+    "GET /api/pedidos/estado/{estado}",
+    "POST /api/pedidos",
+    "PUT /api/pedidos/{id}",
+    "DELETE /api/pedidos/{id}"
+  ]
+}
